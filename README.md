@@ -58,6 +58,15 @@ Fichier `.env`:
 ```env
 DATABASE_URL="file:./dev.db"
 JWT_SECRET="change-this-super-secret-jwt-key"
+APP_URL="http://localhost:3000"
+
+# SMTP (notifications email des messages)
+SMTP_HOST="smtp.example.com"
+SMTP_PORT="587"
+SMTP_SECURE="false"
+SMTP_USER="user@example.com"
+SMTP_PASS="your-password"
+SMTP_FROM="AloPro <no-reply@example.com>"
 ```
 
 ## Base de donnees

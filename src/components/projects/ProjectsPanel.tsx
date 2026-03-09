@@ -126,6 +126,7 @@ export default function ProjectsPanel({
     const result = await Swal.fire({
       title: "Modifier projet",
       html: `
+<<<<<<< HEAD
         <input id="swal-title" class="swal2-input" placeholder="Titre" value="${escapeHtml(project.title)}">
         <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${escapeHtml(project.description)}</textarea>
         <input id="swal-deadline" type="date" class="swal2-input" value="${
@@ -141,9 +142,48 @@ export default function ProjectsPanel({
             ? `<select id="swal-assignee" class="swal2-input"><option value="">Aucune assignation</option>${assigneeOptions}</select>`
             : ""
         }
+=======
+        <div class="swal-pro-form">
+          <div class="swal-pro-row">
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-title">Titre</label>
+              <input id="swal-title" class="swal2-input" placeholder="Titre du projet" value="${escapeHtml(project.title)}">
+            </div>
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-status">Statut</label>
+              <select id="swal-status" class="swal2-select">
+                <option value="pending" ${project.status === "pending" ? "selected" : ""}>pending</option>
+                <option value="in_progress" ${project.status === "in_progress" ? "selected" : ""}>in_progress</option>
+                <option value="completed" ${project.status === "completed" ? "selected" : ""}>completed</option>
+              </select>
+            </div>
+          </div>
+          <div class="swal-pro-field">
+            <label class="swal-pro-label" for="swal-description">Description</label>
+            <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${escapeHtml(project.description)}</textarea>
+          </div>
+          ${
+            canAssignProject
+              ? `<div class="swal-pro-field">
+                  <label class="swal-pro-label" for="swal-assignee">Assigner a</label>
+                  <select id="swal-assignee" class="swal2-select"><option value="">Aucune assignation</option>${assigneeOptions}</select>
+                </div>`
+              : ""
+          }
+        </div>
+>>>>>>> dbc121354ca890bf4e1d48224a281bb620f14915
       `,
       showCancelButton: true,
       confirmButtonText: "Mettre a jour",
+      cancelButtonText: "Annuler",
+      buttonsStyling: false,
+      customClass: {
+        popup: "swal-pro-modal",
+        title: "swal-pro-title",
+        htmlContainer: "swal-pro-html",
+        confirmButton: "swal-pro-confirm",
+        cancelButton: "swal-pro-cancel",
+      },
       preConfirm: () => {
         const title = (document.getElementById("swal-title") as HTMLInputElement)?.value;
         const description = (document.getElementById("swal-description") as HTMLTextAreaElement)?.value;

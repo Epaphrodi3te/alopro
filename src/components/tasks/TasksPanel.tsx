@@ -137,29 +137,62 @@ export default function TasksPanel({
     const result = await Swal.fire({
       title: "Modifier tache",
       html: `
-        <input id="swal-title" class="swal2-input" placeholder="Titre" value="${escapeHtml(task.title)}">
-        <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${escapeHtml(task.description)}</textarea>
-        <select id="swal-priority" class="swal2-input">
-          <option value="low" ${task.priority === "low" ? "selected" : ""}>low</option>
-          <option value="medium" ${task.priority === "medium" ? "selected" : ""}>medium</option>
-          <option value="high" ${task.priority === "high" ? "selected" : ""}>high</option>
-        </select>
-        <select id="swal-status" class="swal2-input">
-          <option value="todo" ${task.status === "todo" ? "selected" : ""}>todo</option>
-          <option value="in_progress" ${task.status === "in_progress" ? "selected" : ""}>in_progress</option>
-          <option value="done" ${task.status === "done" ? "selected" : ""}>done</option>
-        </select>
-        <input id="swal-deadline" type="date" class="swal2-input" value="${
-          task.deadline ? new Date(task.deadline).toISOString().slice(0, 10) : ""
-        }">
-        ${
-          canAssignTask
-            ? `<select id="swal-assignee" class="swal2-input"><option value="">Aucune assignation</option>${agentOptions}</select>`
-            : ""
-        }
+        <div class="swal-pro-form">
+          <div class="swal-pro-field">
+            <label class="swal-pro-label" for="swal-title">Titre</label>
+            <input id="swal-title" class="swal2-input" placeholder="Titre de la tache" value="${escapeHtml(task.title)}">
+          </div>
+          <div class="swal-pro-field">
+            <label class="swal-pro-label" for="swal-description">Description</label>
+            <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${escapeHtml(task.description)}</textarea>
+          </div>
+          <div class="swal-pro-row">
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-priority">Priorite</label>
+              <select id="swal-priority" class="swal2-select">
+                <option value="low" ${task.priority === "low" ? "selected" : ""}>low</option>
+                <option value="medium" ${task.priority === "medium" ? "selected" : ""}>medium</option>
+                <option value="high" ${task.priority === "high" ? "selected" : ""}>high</option>
+              </select>
+            </div>
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-status">Statut</label>
+              <select id="swal-status" class="swal2-select">
+                <option value="todo" ${task.status === "todo" ? "selected" : ""}>todo</option>
+                <option value="in_progress" ${task.status === "in_progress" ? "selected" : ""}>in_progress</option>
+                <option value="done" ${task.status === "done" ? "selected" : ""}>done</option>
+              </select>
+            </div>
+          </div>
+          <div class="swal-pro-row">
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-deadline">Deadline</label>
+              <input id="swal-deadline" type="date" class="swal2-input" value="${
+                task.deadline ? new Date(task.deadline).toISOString().slice(0, 10) : ""
+              }">
+            </div>
+            ${
+              canAssignTask
+                ? `<div class="swal-pro-field">
+                    <label class="swal-pro-label" for="swal-assignee">Assigner a</label>
+                    <select id="swal-assignee" class="swal2-select"><option value="">Aucune assignation</option>${agentOptions}</select>
+                  </div>`
+                : ""
+            }
+          </div>
+        </div>
       `,
       showCancelButton: true,
       confirmButtonText: "Mettre a jour",
+      cancelButtonText: "Annuler",
+      buttonsStyling: false,
+      customClass: {
+        popup: "swal-pro-modal",
+        title: "swal-pro-title",
+        htmlContainer: "swal-pro-html",
+        confirmButton: "swal-pro-confirm",
+        cancelButton: "swal-pro-cancel",
+      },
       preConfirm: () => {
         const title = (document.getElementById("swal-title") as HTMLInputElement)?.value;
         const description = (document.getElementById("swal-description") as HTMLTextAreaElement)?.value;

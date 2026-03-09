@@ -83,26 +83,65 @@ export default function UsersPanel({
     const result = await Swal.fire({
       title: "Modifier utilisateur",
       html: `
-        <input id="swal-firstName" class="swal2-input" placeholder="Prenom" value="${escapeHtml(user.firstName)}">
-        <input id="swal-lastName" class="swal2-input" placeholder="Nom" value="${escapeHtml(user.lastName)}">
-        <input id="swal-email" class="swal2-input" placeholder="Email" value="${escapeHtml(user.email)}">
-        <input id="swal-phone" class="swal2-input" placeholder="Telephone" value="${escapeHtml(user.phone ?? "")}">
-        <input id="swal-password" type="password" class="swal2-input" placeholder="Nouveau mot de passe (optionnel)">
-        <select id="swal-role" class="swal2-input">
-          <option value="admin" ${user.role === "admin" ? "selected" : ""}>admin</option>
-          <option value="manager" ${user.role === "manager" ? "selected" : ""}>manager</option>
-          <option value="agent" ${user.role === "agent" ? "selected" : ""}>agent</option>
-        </select>
+        <div class="swal-user-shell">
+          <div class="swal-user-head">
+            <span class="swal-user-avatar">${escapeHtml(`${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase())}</span>
+            <div class="swal-user-meta">
+              <p class="swal-user-name">${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</p>
+              <p class="swal-user-role">${escapeHtml(user.role)}</p>
+            </div>
+          </div>
+        </div>
+        <div class="swal-pro-form">
+          <div class="swal-pro-row">
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-firstName">Prenom</label>
+              <input id="swal-firstName" class="swal2-input" placeholder="Prenom" value="${escapeHtml(user.firstName)}">
+            </div>
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-lastName">Nom</label>
+              <input id="swal-lastName" class="swal2-input" placeholder="Nom" value="${escapeHtml(user.lastName)}">
+            </div>
+          </div>
+          <div class="swal-pro-row">
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-email">Email</label>
+              <input id="swal-email" class="swal2-input" placeholder="Email" value="${escapeHtml(user.email)}">
+            </div>
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-phone">Telephone</label>
+              <input id="swal-phone" class="swal2-input" placeholder="Telephone" value="${escapeHtml(user.phone ?? "")}">
+            </div>
+          </div>
+          <div class="swal-pro-row">
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-role">Role</label>
+              <select id="swal-role" class="swal2-select">
+                <option value="admin" ${user.role === "admin" ? "selected" : ""}>admin</option>
+                <option value="manager" ${user.role === "manager" ? "selected" : ""}>manager</option>
+                <option value="agent" ${user.role === "agent" ? "selected" : ""}>agent</option>
+              </select>
+            </div>
+          </div>
+        </div>
       `,
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Mettre a jour",
+      cancelButtonText: "Annuler",
+      buttonsStyling: false,
+      customClass: {
+        popup: "swal-pro-modal",
+        title: "swal-pro-title",
+        htmlContainer: "swal-pro-html",
+        confirmButton: "swal-pro-confirm",
+        cancelButton: "swal-pro-cancel",
+      },
       preConfirm: () => {
-        const firstName = (document.getElementById("swal-firstName") as HTMLInputElement)?.value;
-        const lastName = (document.getElementById("swal-lastName") as HTMLInputElement)?.value;
-        const email = (document.getElementById("swal-email") as HTMLInputElement)?.value;
-        const phone = (document.getElementById("swal-phone") as HTMLInputElement)?.value;
-        const password = (document.getElementById("swal-password") as HTMLInputElement)?.value;
+        const firstName = (document.getElementById("swal-firstName") as HTMLInputElement)?.value?.trim();
+        const lastName = (document.getElementById("swal-lastName") as HTMLInputElement)?.value?.trim();
+        const email = (document.getElementById("swal-email") as HTMLInputElement)?.value?.trim();
+        const phone = (document.getElementById("swal-phone") as HTMLInputElement)?.value?.trim();
         const role = (document.getElementById("swal-role") as HTMLSelectElement)?.value;
 
         if (!firstName || !lastName || !email || !role) {
@@ -110,14 +149,21 @@ export default function UsersPanel({
           return;
         }
 
-        return {
+        const payload: {
+          firstName: string;
+          lastName: string;
+          email: string;
+          phone: string;
+          role: string;
+        } = {
           firstName,
           lastName,
           email,
-          phone,
-          password,
+          phone: phone ?? "",
           role,
         };
+
+        return payload;
       },
     });
 
