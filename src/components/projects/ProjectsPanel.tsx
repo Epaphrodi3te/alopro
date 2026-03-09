@@ -3,11 +3,13 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Role } from "@prisma/client";
 import { useRouter } from "next/navigation";
+import { FiEdit2, FiPlusCircle, FiTrash2 } from "react-icons/fi";
 import Swal from "sweetalert2";
 
 import DataTable from "@/components/tables/DataTable";
 import Badge from "@/components/ui/Badge";
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
+import { escapeHtml } from "@/lib/html";
 import { ProjectItem, UserLight } from "@/lib/types";
 
 type ProjectsPanelProps = {
@@ -89,15 +91,15 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
     const assigneeOptions = assignees
       .map(
         (user) =>
-          `<option value="${user.id}" ${project.assignedTo?.id === user.id ? "selected" : ""}>${user.firstName} ${user.lastName} (${user.role})</option>`,
+          `<option value="${user.id}" ${project.assignedTo?.id === user.id ? "selected" : ""}>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)} (${escapeHtml(user.role)})</option>`,
       )
       .join("");
 
     const result = await Swal.fire({
       title: "Modifier projet",
       html: `
-        <input id="swal-title" class="swal2-input" placeholder="Titre" value="${project.title}">
-        <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${project.description}</textarea>
+        <input id="swal-title" class="swal2-input" placeholder="Titre" value="${escapeHtml(project.title)}">
+        <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${escapeHtml(project.description)}</textarea>
         <select id="swal-status" class="swal2-input">
           <option value="pending" ${project.status === "pending" ? "selected" : ""}>pending</option>
           <option value="in_progress" ${project.status === "in_progress" ? "selected" : ""}>in_progress</option>
@@ -197,56 +199,73 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Creer un projet</h2>
+      <section className="app-card p-5">
+        <h2 className="text-lg font-bold text-slate-900">Creer un projet</h2>
 
-        <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={submitCreate}>
-          <input
-            required
-            value={form.title}
-            onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-            placeholder="Titre"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <select
-            value={form.status}
-            onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="pending">pending</option>
-            <option value="in_progress">in_progress</option>
-            <option value="completed">completed</option>
-          </select>
+        <form className="form-grid mt-4 md:grid-cols-2" onSubmit={submitCreate}>
+          <div className="form-field">
+            <label htmlFor="project-title" className="field-label">Titre du projet</label>
+            <input
+              id="project-title"
+              required
+              value={form.title}
+              onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+              placeholder="Ex: Refonte site vitrine"
+              className="app-input"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="project-status" className="field-label">Statut</label>
+            <select
+              id="project-status"
+              value={form.status}
+              onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
+              className="app-select"
+            >
+              <option value="pending">pending</option>
+              <option value="in_progress">in_progress</option>
+              <option value="completed">completed</option>
+            </select>
+          </div>
 
-          <textarea
-            required
-            value={form.description}
-            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-            placeholder="Description"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2"
-            rows={3}
-          />
+          <div className="form-field md:col-span-2">
+            <label htmlFor="project-description" className="field-label">Description</label>
+            <textarea
+              id="project-description"
+              required
+              value={form.description}
+              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+              placeholder="Objectifs, contexte et livrables..."
+              className="app-textarea"
+              rows={3}
+            />
+          </div>
 
           {canAssignProject && (
-            <select
-              value={form.assignedToId}
-              onChange={(event) => setForm((prev) => ({ ...prev, assignedToId: event.target.value }))}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            >
-              <option value="">Aucune assignation</option>
-              {assignees.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.firstName} {user.lastName} ({user.role})
-                </option>
-              ))}
-            </select>
+            <div className="form-field">
+              <label htmlFor="project-assignee" className="field-label">Assigner a</label>
+              <select
+                id="project-assignee"
+                value={form.assignedToId}
+                onChange={(event) => setForm((prev) => ({ ...prev, assignedToId: event.target.value }))}
+                className="app-select"
+              >
+                <option value="">Aucune assignation</option>
+                {assignees.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.firstName} {user.lastName} ({user.role})
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:bg-slate-500"
+            className="app-btn-primary w-full md:w-fit"
           >
+            <FiPlusCircle className="text-sm" />
             {loading ? "Creation..." : "Creer"}
           </button>
         </form>
@@ -264,37 +283,39 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
 
             return (
               <tr key={project.id} className="border-t border-slate-200">
-                <td className="px-4 py-3">
+                <td data-label="Titre" className="px-4 py-3">
                   <p className="font-semibold text-slate-900">{project.title}</p>
                   <p className="max-w-xs text-xs text-slate-500">{project.description}</p>
                 </td>
-                <td className="px-4 py-3">{statusBadge(project.status)}</td>
-                <td className="px-4 py-3">
+                <td data-label="Statut" className="px-4 py-3">{statusBadge(project.status)}</td>
+                <td data-label="Cree par" className="px-4 py-3">
                   {project.createdBy.firstName} {project.createdBy.lastName}
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="Assigne a" className="px-4 py-3">
                   {project.assignedTo
                     ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}`
                     : "-"}
                 </td>
-                <td className="px-4 py-3">{project._count.tasks}</td>
-                <td className="px-4 py-3">{new Date(project.createdAt).toLocaleDateString()}</td>
-                <td className="px-4 py-3">
+                <td data-label="Taches" className="px-4 py-3">{project._count.tasks}</td>
+                <td data-label="Date" className="px-4 py-3">{new Date(project.createdAt).toLocaleDateString()}</td>
+                <td data-label="Actions" className="px-4 py-3">
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => editProject(project)}
                       disabled={!canEdit}
-                      className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                      className="app-btn-soft"
                     >
+                      <FiEdit2 className="text-xs" />
                       Modifier
                     </button>
                     <button
                       type="button"
                       onClick={() => deleteProject(project)}
                       disabled={!canDelete}
-                      className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                      className="app-btn-danger"
                     >
+                      <FiTrash2 className="text-xs" />
                       Supprimer
                     </button>
                   </div>

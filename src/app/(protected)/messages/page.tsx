@@ -47,8 +47,8 @@ export default async function MessagesPage() {
   return (
     <div className="space-y-5">
       <section>
-        <h1 className="text-2xl font-bold text-slate-900">Messages</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="page-title text-slate-900">Messages</h1>
+        <p className="page-subtitle">
           Messagerie interne simple pour la collaboration entre equipes.
         </p>
       </section>

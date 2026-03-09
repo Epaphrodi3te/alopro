@@ -2,11 +2,13 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FiEdit2, FiPlusCircle, FiTrash2 } from "react-icons/fi";
 import Swal from "sweetalert2";
 
 import DataTable from "@/components/tables/DataTable";
 import Badge from "@/components/ui/Badge";
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
+import { escapeHtml } from "@/lib/html";
 import { BasicUser } from "@/lib/types";
 
 type UsersPanelProps = {
@@ -66,10 +68,10 @@ export default function UsersPanel({ users, currentUserId }: UsersPanelProps) {
     const result = await Swal.fire({
       title: "Modifier utilisateur",
       html: `
-        <input id="swal-firstName" class="swal2-input" placeholder="Prenom" value="${user.firstName}">
-        <input id="swal-lastName" class="swal2-input" placeholder="Nom" value="${user.lastName}">
-        <input id="swal-email" class="swal2-input" placeholder="Email" value="${user.email}">
-        <input id="swal-phone" class="swal2-input" placeholder="Telephone" value="${user.phone ?? ""}">
+        <input id="swal-firstName" class="swal2-input" placeholder="Prenom" value="${escapeHtml(user.firstName)}">
+        <input id="swal-lastName" class="swal2-input" placeholder="Nom" value="${escapeHtml(user.lastName)}">
+        <input id="swal-email" class="swal2-input" placeholder="Email" value="${escapeHtml(user.email)}">
+        <input id="swal-phone" class="swal2-input" placeholder="Telephone" value="${escapeHtml(user.phone ?? "")}">
         <input id="swal-password" type="password" class="swal2-input" placeholder="Nouveau mot de passe (optionnel)">
         <select id="swal-role" class="swal2-input">
           <option value="admin" ${user.role === "admin" ? "selected" : ""}>admin</option>
@@ -163,62 +165,87 @@ export default function UsersPanel({ users, currentUserId }: UsersPanelProps) {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Creer un utilisateur</h2>
+      <section className="app-card p-5">
+        <h2 className="text-lg font-bold text-slate-900">Creer un utilisateur</h2>
 
-        <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleCreate}>
-          <input
-            required
-            value={form.firstName}
-            onChange={(event) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
-            placeholder="Prenom"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <input
-            required
-            value={form.lastName}
-            onChange={(event) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
-            placeholder="Nom"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <input
-            required
-            type="email"
-            value={form.email}
-            onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-            placeholder="Email"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <input
-            value={form.phone}
-            onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
-            placeholder="Telephone"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <input
-            required
-            type="password"
-            minLength={8}
-            value={form.password}
-            onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-            placeholder="Mot de passe"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <select
-            value={form.role}
-            onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value }))}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="admin">admin</option>
-            <option value="manager">manager</option>
-            <option value="agent">agent</option>
-          </select>
+        <form className="form-grid mt-4 md:grid-cols-2" onSubmit={handleCreate}>
+          <div className="form-field">
+            <label htmlFor="user-first-name" className="field-label">Prenom</label>
+            <input
+              id="user-first-name"
+              required
+              value={form.firstName}
+              onChange={(event) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
+              placeholder="Ex: Fatou"
+              className="app-input"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="user-last-name" className="field-label">Nom</label>
+            <input
+              id="user-last-name"
+              required
+              value={form.lastName}
+              onChange={(event) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
+              placeholder="Ex: Adeyemi"
+              className="app-input"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="user-email" className="field-label">Email</label>
+            <input
+              id="user-email"
+              required
+              type="email"
+              value={form.email}
+              onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+              placeholder="email@entreprise.com"
+              className="app-input"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="user-phone" className="field-label">Telephone</label>
+            <input
+              id="user-phone"
+              value={form.phone}
+              onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
+              placeholder="+229 00 00 00 00"
+              className="app-input"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="user-password" className="field-label">Mot de passe</label>
+            <input
+              id="user-password"
+              required
+              type="password"
+              minLength={8}
+              value={form.password}
+              onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+              placeholder="Minimum 8 caracteres"
+              className="app-input"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="user-role" className="field-label">Role</label>
+            <select
+              id="user-role"
+              value={form.role}
+              onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value }))}
+              className="app-select"
+            >
+              <option value="admin">admin</option>
+              <option value="manager">manager</option>
+              <option value="agent">agent</option>
+            </select>
+          </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:bg-slate-500"
+            className="app-btn-primary w-full md:w-fit"
           >
+            <FiPlusCircle className="text-sm" />
             {loading ? "Creation..." : "Creer"}
           </button>
         </form>
@@ -232,31 +259,33 @@ export default function UsersPanel({ users, currentUserId }: UsersPanelProps) {
         >
           {sortedUsers.map((user) => (
             <tr key={user.id} className="border-t border-slate-200">
-              <td className="px-4 py-3 font-semibold text-slate-900">{user.firstName} {user.lastName}</td>
-              <td className="px-4 py-3">{user.email}</td>
-              <td className="px-4 py-3">
+              <td data-label="Nom" className="px-4 py-3 font-semibold text-slate-900">{user.firstName} {user.lastName}</td>
+              <td data-label="Email" className="px-4 py-3">{user.email}</td>
+              <td data-label="Role" className="px-4 py-3">
                 <Badge
                   label={user.role}
                   variant={user.role === "admin" ? "admin" : user.role === "manager" ? "manager" : "agent"}
                 />
               </td>
-              <td className="px-4 py-3">{user.phone ?? "-"}</td>
-              <td className="px-4 py-3">{new Date(user.createdAt).toLocaleDateString()}</td>
-              <td className="px-4 py-3">
+              <td data-label="Telephone" className="px-4 py-3">{user.phone ?? "-"}</td>
+              <td data-label="Date" className="px-4 py-3">{new Date(user.createdAt).toLocaleDateString()}</td>
+              <td data-label="Actions" className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => editUser(user)}
-                    className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                    className="app-btn-soft"
                   >
+                    <FiEdit2 className="text-xs" />
                     Modifier
                   </button>
                   <button
                     type="button"
                     onClick={() => deleteUser(user)}
                     disabled={user.id === currentUserId}
-                    className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                    className="app-btn-danger"
                   >
+                    <FiTrash2 className="text-xs" />
                     Supprimer
                   </button>
                 </div>

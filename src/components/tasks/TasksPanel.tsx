@@ -3,11 +3,13 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Role } from "@prisma/client";
 import { useRouter } from "next/navigation";
+import { FiEdit2, FiPlusCircle, FiTrash2 } from "react-icons/fi";
 import Swal from "sweetalert2";
 
 import DataTable from "@/components/tables/DataTable";
 import Badge from "@/components/ui/Badge";
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
+import { escapeHtml } from "@/lib/html";
 import { TaskItem, UserLight } from "@/lib/types";
 
 type ProjectOption = {
@@ -116,15 +118,15 @@ export default function TasksPanel({ tasks, role, projects, agents }: TasksPanel
     const agentOptions = agents
       .map(
         (user) =>
-          `<option value="${user.id}" ${task.assignedTo?.id === user.id ? "selected" : ""}>${user.firstName} ${user.lastName}</option>`,
+          `<option value="${user.id}" ${task.assignedTo?.id === user.id ? "selected" : ""}>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</option>`,
       )
       .join("");
 
     const result = await Swal.fire({
       title: "Modifier tache",
       html: `
-        <input id="swal-title" class="swal2-input" placeholder="Titre" value="${task.title}">
-        <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${task.description}</textarea>
+        <input id="swal-title" class="swal2-input" placeholder="Titre" value="${escapeHtml(task.title)}">
+        <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${escapeHtml(task.description)}</textarea>
         <select id="swal-priority" class="swal2-input">
           <option value="low" ${task.priority === "low" ? "selected" : ""}>low</option>
           <option value="medium" ${task.priority === "medium" ? "selected" : ""}>medium</option>
@@ -236,87 +238,116 @@ export default function TasksPanel({ tasks, role, projects, agents }: TasksPanel
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Creer une tache</h2>
+      <section className="app-card p-5">
+        <h2 className="text-lg font-bold text-slate-900">Creer une tache</h2>
 
-        <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleCreate}>
-          <input
-            required
-            value={form.title}
-            onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-            placeholder="Titre"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-          <select
-            required
-            value={form.projectId}
-            onChange={(event) => setForm((prev) => ({ ...prev, projectId: event.target.value }))}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            {projects.length === 0 && <option value="">Aucun projet</option>}
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.title}
-              </option>
-            ))}
-          </select>
-
-          <textarea
-            required
-            value={form.description}
-            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-            placeholder="Description"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2"
-            rows={3}
-          />
-
-          <select
-            value={form.priority}
-            onChange={(event) => setForm((prev) => ({ ...prev, priority: event.target.value }))}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="low">low</option>
-            <option value="medium">medium</option>
-            <option value="high">high</option>
-          </select>
-
-          <select
-            value={form.status}
-            onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="todo">todo</option>
-            <option value="in_progress">in_progress</option>
-            <option value="done">done</option>
-          </select>
-
-          <input
-            type="date"
-            value={form.deadline}
-            onChange={(event) => setForm((prev) => ({ ...prev, deadline: event.target.value }))}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-
-          {canAssignTask && (
+        <form className="form-grid mt-4 md:grid-cols-2" onSubmit={handleCreate}>
+          <div className="form-field">
+            <label htmlFor="task-title" className="field-label">Titre de la tache</label>
+            <input
+              id="task-title"
+              required
+              value={form.title}
+              onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+              placeholder="Ex: Integrer API de paiement"
+              className="app-input"
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="task-project" className="field-label">Projet</label>
             <select
-              value={form.assignedToId}
-              onChange={(event) => setForm((prev) => ({ ...prev, assignedToId: event.target.value }))}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              id="task-project"
+              required
+              value={form.projectId}
+              onChange={(event) => setForm((prev) => ({ ...prev, projectId: event.target.value }))}
+              className="app-select"
             >
-              <option value="">Aucune assignation</option>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.firstName} {agent.lastName}
+              {projects.length === 0 && <option value="">Aucun projet</option>}
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.title}
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="form-field md:col-span-2">
+            <label htmlFor="task-description" className="field-label">Description</label>
+            <textarea
+              id="task-description"
+              required
+              value={form.description}
+              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+              placeholder="Contexte et criteres de succes..."
+              className="app-textarea"
+              rows={3}
+            />
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="task-priority" className="field-label">Priorite</label>
+            <select
+              id="task-priority"
+              value={form.priority}
+              onChange={(event) => setForm((prev) => ({ ...prev, priority: event.target.value }))}
+              className="app-select"
+            >
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="task-status" className="field-label">Statut</label>
+            <select
+              id="task-status"
+              value={form.status}
+              onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
+              className="app-select"
+            >
+              <option value="todo">todo</option>
+              <option value="in_progress">in_progress</option>
+              <option value="done">done</option>
+            </select>
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="task-deadline" className="field-label">Deadline</label>
+            <input
+              id="task-deadline"
+              type="date"
+              value={form.deadline}
+              onChange={(event) => setForm((prev) => ({ ...prev, deadline: event.target.value }))}
+              className="app-input"
+            />
+          </div>
+
+          {canAssignTask && (
+            <div className="form-field">
+              <label htmlFor="task-assignee" className="field-label">Assigner a</label>
+              <select
+                id="task-assignee"
+                value={form.assignedToId}
+                onChange={(event) => setForm((prev) => ({ ...prev, assignedToId: event.target.value }))}
+                className="app-select"
+              >
+                <option value="">Aucune assignation</option>
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.firstName} {agent.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
 
           <button
             type="submit"
             disabled={loading || projects.length === 0}
-            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-500"
+            className="app-btn-primary w-full md:w-fit"
           >
+            <FiPlusCircle className="text-sm" />
             {loading ? "Creation..." : "Creer"}
           </button>
         </form>
@@ -339,35 +370,37 @@ export default function TasksPanel({ tasks, role, projects, agents }: TasksPanel
         >
           {sortedTasks.map((task) => (
             <tr key={task.id} className="border-t border-slate-200">
-              <td className="px-4 py-3">
+              <td data-label="Tache" className="px-4 py-3">
                 <p className="font-semibold text-slate-900">{task.title}</p>
                 <p className="max-w-xs text-xs text-slate-500">{task.description}</p>
               </td>
-              <td className="px-4 py-3">{task.project.title}</td>
-              <td className="px-4 py-3">{priorityBadge(task.priority)}</td>
-              <td className="px-4 py-3">{statusBadge(task.status)}</td>
-              <td className="px-4 py-3">
+              <td data-label="Projet" className="px-4 py-3">{task.project.title}</td>
+              <td data-label="Priorite" className="px-4 py-3">{priorityBadge(task.priority)}</td>
+              <td data-label="Statut" className="px-4 py-3">{statusBadge(task.status)}</td>
+              <td data-label="Assignee" className="px-4 py-3">
                 {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "-"}
               </td>
-              <td className="px-4 py-3">
+              <td data-label="Deadline" className="px-4 py-3">
                 {task.deadline ? new Date(task.deadline).toLocaleDateString() : "-"}
               </td>
-              <td className="px-4 py-3">{new Date(task.createdAt).toLocaleDateString()}</td>
-              <td className="px-4 py-3">
+              <td data-label="Date" className="px-4 py-3">{new Date(task.createdAt).toLocaleDateString()}</td>
+              <td data-label="Actions" className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => editTask(task)}
-                    className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                    className="app-btn-soft"
                   >
+                    <FiEdit2 className="text-xs" />
                     Modifier
                   </button>
                   <button
                     type="button"
                     onClick={() => deleteTask(task)}
                     disabled={role !== "admin"}
-                    className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                    className="app-btn-danger"
                   >
+                    <FiTrash2 className="text-xs" />
                     Supprimer
                   </button>
                 </div>

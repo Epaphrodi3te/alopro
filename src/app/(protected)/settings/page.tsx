@@ -7,12 +7,12 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-5">
       <section>
-        <h1 className="text-2xl font-bold text-slate-900">Parametres</h1>
-        <p className="mt-1 text-sm text-slate-600">Informations de votre compte et bonnes pratiques de securite.</p>
+        <h1 className="page-title text-slate-900">Parametres</h1>
+        <p className="page-subtitle">Informations de votre compte et bonnes pratiques de securite.</p>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Profil</h2>
+      <section className="app-card p-5">
+        <h2 className="text-lg font-bold text-slate-900">Profil</h2>
 
         <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
           <p><span className="font-semibold">Nom:</span> {user.firstName} {user.lastName}</p>
@@ -29,7 +29,7 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
+      <section className="rounded-2xl border border-amber-200 bg-amber-50/90 p-5 text-sm text-amber-800">
         Les sessions sont gerees par token JWT stocke en cookie HTTP Only. Gardez vos identifiants confidentiels.
       </section>
     </div>

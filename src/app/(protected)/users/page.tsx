@@ -27,8 +27,8 @@ export default async function UsersPage() {
   return (
     <div className="space-y-5">
       <section>
-        <h1 className="text-2xl font-bold text-slate-900">Gestion des utilisateurs</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="page-title text-slate-900">Gestion des utilisateurs</h1>
+        <p className="page-subtitle">
           Creation, edition et suppression des comptes (admin uniquement).
         </p>
       </section>

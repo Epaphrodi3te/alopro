@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FiSend } from "react-icons/fi";
 
 import DataTable from "@/components/tables/DataTable";
 import Badge from "@/components/ui/Badge";
@@ -56,40 +57,49 @@ export default function MessagesPanel({ messages, users, currentUserId }: Messag
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-900">Nouveau message</h2>
+      <section className="app-card p-5">
+        <h2 className="text-lg font-bold text-slate-900">Nouveau message</h2>
 
-        <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={sendMessage}>
-          <select
-            required
-            value={receiverId}
-            onChange={(event) => setReceiverId(event.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            {users.length === 0 && <option value="">Aucun destinataire</option>}
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.firstName} {user.lastName} ({user.role})
-              </option>
-            ))}
-          </select>
+        <form className="form-grid mt-4 md:grid-cols-2" onSubmit={sendMessage}>
+          <div className="form-field">
+            <label htmlFor="message-receiver" className="field-label">Destinataire</label>
+            <select
+              id="message-receiver"
+              required
+              value={receiverId}
+              onChange={(event) => setReceiverId(event.target.value)}
+              className="app-select"
+            >
+              {users.length === 0 && <option value="">Aucun destinataire</option>}
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.firstName} {user.lastName} ({user.role})
+                </option>
+              ))}
+            </select>
+          </div>
 
           <button
             type="submit"
             disabled={loading || users.length === 0}
-            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-500"
+            className="app-btn-primary w-full md:w-fit"
           >
+            <FiSend className="text-sm" />
             {loading ? "Envoi..." : "Envoyer"}
           </button>
 
-          <textarea
-            required
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            placeholder="Votre message"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2"
-            rows={4}
-          />
+          <div className="form-field md:col-span-2">
+            <label htmlFor="message-content" className="field-label">Message</label>
+            <textarea
+              id="message-content"
+              required
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              placeholder="Ecrivez votre message..."
+              className="app-textarea"
+              rows={4}
+            />
+          </div>
         </form>
       </section>
 
@@ -104,19 +114,19 @@ export default function MessagesPanel({ messages, users, currentUserId }: Messag
 
             return (
               <tr key={message.id} className="border-t border-slate-200">
-                <td className="px-4 py-3">
+                <td data-label="Type" className="px-4 py-3">
                   {outgoing ? <Badge label="envoye" variant="progress" /> : <Badge label="recu" variant="pending" />}
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="De" className="px-4 py-3">
                   {message.sender.firstName} {message.sender.lastName}
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="A" className="px-4 py-3">
                   {message.receiver.firstName} {message.receiver.lastName}
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="Message" className="px-4 py-3">
                   <p className="max-w-xl text-sm text-slate-700">{message.content}</p>
                 </td>
-                <td className="px-4 py-3">{new Date(message.createdAt).toLocaleString()}</td>
+                <td data-label="Date" className="px-4 py-3">{new Date(message.createdAt).toLocaleString()}</td>
               </tr>
             );
           })}

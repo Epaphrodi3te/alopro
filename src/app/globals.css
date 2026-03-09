@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f1f5f9;
+  --background: #f5f7fb;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
   --foreground: #0f172a;
+  --foreground-soft: #475569;
+  --ring: #1d4ed8;
+  --border: #dbe4f0;
+  --shadow-soft: 0 18px 50px -28px rgba(2, 10, 29, 0.35);
+  --shadow-sm: 0 12px 32px -24px rgba(4, 24, 48, 0.35);
 }
 
 * {
@@ -12,12 +19,194 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: var(--background);
+  background:
+    radial-gradient(circle at 90% 6%, rgba(56, 189, 248, 0.14), transparent 35%),
+    radial-gradient(circle at 6% 85%, rgba(45, 212, 191, 0.11), transparent 34%),
+    var(--background);
   color: var(--foreground);
-  font-family: "Sora", "Avenir Next", "Segoe UI", sans-serif;
+  font-family: var(--font-manrope), "Avenir Next", "Segoe UI", sans-serif;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+.page-title {
+  font-size: clamp(1.4rem, 1rem + 1.1vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+
+.page-subtitle {
+  margin-top: 0.45rem;
+  color: var(--foreground-soft);
+  font-size: 0.95rem;
+}
+
+.app-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  border-radius: 1rem;
+}
+
+.app-input,
+.app-select,
+.app-textarea {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid #c8d5e3;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.9rem;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.app-input,
+.app-select {
+  min-height: 2.7rem;
+  padding: 0.6rem 0.8rem;
+}
+
+.app-textarea {
+  padding: 0.7rem 0.85rem;
+  resize: vertical;
+}
+
+.app-input:focus,
+.app-select:focus,
+.app-textarea:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+}
+
+.app-btn-primary,
+.app-btn-danger,
+.app-btn-soft {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.75rem;
+  border: 0;
+  padding: 0.62rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.app-btn-primary:hover,
+.app-btn-danger:hover,
+.app-btn-soft:hover {
+  transform: translateY(-1px);
+}
+
+.app-btn-primary {
+  color: #fff;
+  background: linear-gradient(120deg, #0f172a, #1e293b 60%, #334155);
+}
+
+.app-btn-danger {
+  color: #fff;
+  background: linear-gradient(120deg, #b91c1c, #dc2626);
+}
+
+.app-btn-soft {
+  border: 1px solid var(--border);
+  color: #0f172a;
+  background: #fff;
+}
+
+.app-btn-primary:disabled,
+.app-btn-danger:disabled,
+.app-btn-soft:disabled {
+  cursor: not-allowed;
+  transform: none;
+  filter: saturate(0.6);
+  opacity: 0.65;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #334155;
+}
+
+.field-help {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+@media (max-width: 767px) {
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table,
+  .responsive-table tbody,
+  .responsive-table tr,
+  .responsive-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .responsive-table tbody tr {
+    border-top: 1px solid var(--border);
+    padding: 0.65rem 0.2rem;
+  }
+
+  .responsive-table tbody tr:first-child {
+    border-top: 0;
+  }
+
+  .responsive-table td {
+    border: 0;
+    padding: 0.55rem 0.9rem;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.22rem;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
 }
 
 .swal2-popup {
-  border-radius: 0.9rem;
-  font-family: "Sora", "Avenir Next", "Segoe UI", sans-serif;
+  border-radius: 1rem;
+  box-shadow: var(--shadow-soft);
+  font-family: var(--font-manrope), "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.swal2-title {
+  font-size: 1.25rem;
+}
+
+.swal2-input,
+.swal2-textarea,
+.swal2-select {
+  border-radius: 0.7rem;
+  border: 1px solid #cbd5e1 !important;
 }

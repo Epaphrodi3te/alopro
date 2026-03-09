@@ -85,8 +85,8 @@ export default async function TasksPage() {
   return (
     <div className="space-y-5">
       <section>
-        <h1 className="text-2xl font-bold text-slate-900">Taches</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="page-title text-slate-900">Taches</h1>
+        <p className="page-subtitle">
           Creation, suivi, assignation et execution des taches selon votre role.
         </p>
       </section>

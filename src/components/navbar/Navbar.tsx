@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Swal from "sweetalert2";
+import { usePathname } from "next/navigation";
+import { FiChevronLeft, FiChevronRight, FiLogOut, FiMenu, FiShield } from "react-icons/fi";
 
 import { getRoleLabel } from "@/lib/navigation";
 import { Role } from "@prisma/client";
@@ -10,10 +12,35 @@ import { Role } from "@prisma/client";
 type NavbarProps = {
   role: Role;
   firstName: string;
+  desktopCollapsed: boolean;
+  onToggleDesktopSidebar: () => void;
+  onToggleMobileSidebar: () => void;
 };
 
-export default function Navbar({ role, firstName }: NavbarProps) {
+const sectionByPath: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/users": "Utilisateurs",
+  "/projects": "Projets",
+  "/tasks": "Taches",
+  "/messages": "Messages",
+  "/settings": "Parametres",
+};
+
+function getSection(pathname: string) {
+  const match = Object.keys(sectionByPath).find((item) => pathname === item || pathname.startsWith(`${item}/`));
+  return sectionByPath[match ?? "/dashboard"];
+}
+
+export default function Navbar({
+  role,
+  firstName,
+  desktopCollapsed,
+  onToggleDesktopSidebar,
+  onToggleMobileSidebar,
+}: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const section = getSection(pathname);
   const [loading, setLoading] = useState(false);
 
   const handleLogout = async () => {
@@ -45,18 +72,43 @@ export default function Navbar({ role, firstName }: NavbarProps) {
   };
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-4 md:px-7">
-      <div>
-        <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Espace {getRoleLabel(role)}</p>
-        <h2 className="text-xl font-semibold text-slate-900">Bonjour, {firstName}</h2>
+    <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/90 bg-white/88 px-4 py-4 backdrop-blur md:px-7">
+      <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={onToggleMobileSidebar}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 md:hidden"
+          aria-label="Ouvrir le menu"
+        >
+          <FiMenu />
+        </button>
+        <button
+          type="button"
+          onClick={onToggleDesktopSidebar}
+          className="hidden h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 md:inline-flex"
+          aria-label="Replier le menu"
+        >
+          {desktopCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
+        </button>
+      </div>
+
+      <div className="mr-auto min-w-0">
+        <p className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.13em] text-slate-600">
+          <FiShield className="text-xs" />
+          Espace {getRoleLabel(role)}
+        </p>
+        <h2 className="mt-2 truncate text-xl font-bold tracking-tight text-slate-900 md:text-2xl">
+          {section} <span className="text-slate-400">|</span> Bonjour, {firstName}
+        </h2>
       </div>
 
       <button
         type="button"
         onClick={handleLogout}
         disabled={loading}
-        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-500"
+        className="app-btn-primary"
       >
+        <FiLogOut className="text-sm" />
         {loading ? "Deconnexion..." : "Se deconnecter"}
       </button>
     </header>

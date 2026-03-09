@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { FiCheckSquare, FiFolder, FiMessageSquare, FiUsers } from "react-icons/fi";
 
 import StatCard from "@/components/cards/StatCard";
 import Badge from "@/components/ui/Badge";
@@ -100,26 +101,26 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-7">
       <section>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="page-title text-slate-900">Dashboard</h1>
+        <p className="page-subtitle">
           Vue d&apos;ensemble de votre activite en temps reel.
         </p>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Projets visibles" value={projectCount} accent="blue" />
-        <StatCard label="Taches visibles" value={taskCount} accent="emerald" />
-        <StatCard label="Messages" value={messageCount} accent="amber" />
-        {user.role === "admin" && <StatCard label="Utilisateurs" value={userCount} accent="slate" />}
+        <StatCard label="Projets visibles" value={projectCount} accent="blue" icon={FiFolder} />
+        <StatCard label="Taches visibles" value={taskCount} accent="emerald" icon={FiCheckSquare} />
+        <StatCard label="Messages" value={messageCount} accent="amber" icon={FiMessageSquare} />
+        {user.role === "admin" && <StatCard label="Utilisateurs" value={userCount} accent="slate" icon={FiUsers} />}
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <article className="app-card p-5">
           <h2 className="text-lg font-semibold text-slate-900">Projets recents</h2>
           <div className="mt-4 space-y-3">
             {recentProjects.length === 0 && <p className="text-sm text-slate-500">Aucun projet pour le moment.</p>}
             {recentProjects.map((project) => (
-              <div key={project.id} className="rounded-lg border border-slate-200 p-3">
+              <div key={project.id} className="rounded-xl border border-slate-200/90 bg-slate-50/45 p-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-semibold text-slate-900">{project.title}</p>
                   {projectStatusBadge(project.status)}
@@ -133,12 +134,12 @@ export default async function DashboardPage() {
           </div>
         </article>
 
-        <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <article className="app-card p-5">
           <h2 className="text-lg font-semibold text-slate-900">Taches recentes</h2>
           <div className="mt-4 space-y-3">
             {recentTasks.length === 0 && <p className="text-sm text-slate-500">Aucune tache pour le moment.</p>}
             {recentTasks.map((task) => (
-              <div key={task.id} className="rounded-lg border border-slate-200 p-3">
+              <div key={task.id} className="rounded-xl border border-slate-200/90 bg-slate-50/45 p-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-semibold text-slate-900">{task.title}</p>
                   {taskStatusBadge(task.status)}

@@ -63,7 +63,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     if (parsed.data.email) {
-      data.email = parsed.data.email.toLowerCase().trim();
+      const nextEmail = parsed.data.email.toLowerCase().trim();
+      const existing = await prisma.user.findUnique({ where: { email: nextEmail }, select: { id: true } });
+
+      if (existing && existing.id !== id) {
+        return apiError("Cet email existe deja.", 409);
+      }
+
+      data.email = nextEmail;
     }
 
     if (parsed.data.phone !== undefined) {

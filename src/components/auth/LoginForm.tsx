@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FiLogIn } from "react-icons/fi";
 
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
 
@@ -45,9 +46,9 @@ export default function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-700">
+    <form onSubmit={handleSubmit} className="form-grid">
+      <div className="form-field">
+        <label htmlFor="email" className="field-label">
           Email
         </label>
         <input
@@ -56,13 +57,13 @@ export default function LoginForm() {
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-slate-300 transition focus:ring"
+          className="app-input"
           placeholder="admin@alopro.com"
         />
       </div>
 
-      <div>
-        <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
+      <div className="form-field">
+        <label htmlFor="password" className="field-label">
           Mot de passe
         </label>
         <input
@@ -71,7 +72,7 @@ export default function LoginForm() {
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-slate-300 transition focus:ring"
+          className="app-input"
           placeholder="********"
         />
       </div>
@@ -79,8 +80,9 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-500"
+        className="app-btn-primary w-full"
       >
+        <FiLogIn className="text-sm" />
         {loading ? "Connexion..." : "Se connecter"}
       </button>
     </form>

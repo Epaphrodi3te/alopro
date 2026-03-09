@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
+import { Manrope } from "next/font/google";
 
 import "./globals.css";
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+});
 
 export const metadata: Metadata = {
   title: "AloPro",
@@ -14,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className="bg-slate-100 text-slate-900 antialiased">{children}</body>
+      <body className={`${manrope.variable} bg-slate-100 text-slate-900 antialiased`}>{children}</body>
     </html>
   );
 }
