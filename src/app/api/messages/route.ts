@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { apiError } from "@/lib/api";
+import { isMailerConfigured, sendMessageNotificationEmail } from "@/lib/mailer";
 import { requireApiUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
@@ -64,7 +65,12 @@ export async function POST(request: NextRequest) {
 
     const receiver = await prisma.user.findUnique({
       where: { id: parsed.data.receiverId },
-      select: { id: true },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
     });
 
     if (!receiver) {
@@ -97,7 +103,29 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ message: "Message envoye.", data: message }, { status: 201 });
+    let emailNotificationSent = false;
+
+    if (isMailerConfigured()) {
+      try {
+        emailNotificationSent = await sendMessageNotificationEmail({
+          receiverEmail: receiver.email,
+          receiverName: `${receiver.firstName} ${receiver.lastName}`,
+          senderName: `${user.firstName} ${user.lastName}`,
+          content: parsed.data.content,
+        });
+      } catch {
+        emailNotificationSent = false;
+      }
+    }
+
+    return NextResponse.json(
+      {
+        message: "Message envoye.",
+        data: message,
+        emailNotificationSent,
+      },
+      { status: 201 },
+    );
   } catch {
     return apiError("Erreur serveur.", 500);
   }

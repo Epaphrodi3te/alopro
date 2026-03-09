@@ -210,3 +210,132 @@ button {
   border-radius: 0.7rem;
   border: 1px solid #cbd5e1 !important;
 }
+
+.swal2-popup.swal-pro-modal {
+  border-radius: 1.15rem;
+  padding: 1.15rem 1.15rem 0.95rem;
+  border: 1px solid #dbe4f0;
+  background:
+    radial-gradient(circle at 92% 10%, rgba(56, 189, 248, 0.12), transparent 35%),
+    #ffffff;
+}
+
+.swal-pro-title {
+  font-size: 1.18rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.swal-pro-html {
+  margin-top: 0.35rem !important;
+  text-align: left;
+}
+
+.swal-pro-form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.swal-pro-row {
+  display: grid;
+  gap: 0.7rem;
+}
+
+@media (min-width: 640px) {
+  .swal-pro-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.swal-pro-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+}
+
+.swal-pro-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 800;
+  color: #334155;
+}
+
+.swal-pro-field .swal2-input,
+.swal-pro-field .swal2-textarea,
+.swal-pro-field .swal2-select {
+  margin: 0 !important;
+  width: 100% !important;
+  min-height: 2.6rem;
+  font-size: 0.88rem;
+  border-radius: 0.72rem;
+}
+
+.swal-pro-field .swal2-textarea {
+  min-height: 6rem;
+}
+
+.swal-pro-confirm,
+.swal-pro-cancel {
+  border-radius: 0.72rem !important;
+  padding: 0.58rem 0.95rem !important;
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+}
+
+.swal-pro-confirm {
+  background: linear-gradient(120deg, #0f172a, #1e293b) !important;
+}
+
+.swal-pro-cancel {
+  background: #eef2f7 !important;
+  color: #334155 !important;
+}
+
+.swal-user-shell {
+  margin-bottom: 0.85rem;
+  border: 1px solid #dbe4f0;
+  border-radius: 0.95rem;
+  padding: 0.72rem;
+  background: linear-gradient(120deg, #f8fafc, #eef6ff);
+}
+
+.swal-user-head {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.swal-user-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.72rem;
+  background: linear-gradient(130deg, #0f172a, #334155);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.swal-user-meta {
+  min-width: 0;
+}
+
+.swal-user-name {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.swal-user-role {
+  margin: 0.2rem 0 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+}

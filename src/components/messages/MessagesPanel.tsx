@@ -45,8 +45,14 @@ export default function MessagesPanel({ messages, users, currentUserId }: Messag
         return;
       }
 
+      const data = (await response.json()) as { emailNotificationSent?: boolean };
       setContent("");
-      await showSuccess("Message envoye");
+      await showSuccess(
+        "Message envoye",
+        data.emailNotificationSent
+          ? "Notification email envoyee au destinataire."
+          : "Message interne envoye. Configurez SMTP pour activer l'email.",
+      );
       router.refresh();
     } catch {
       await showError("Erreur reseau", "Impossible d'envoyer le message.");
