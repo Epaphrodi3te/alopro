@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  manager
+  agent
+}
+
+enum ProjectStatus {
+  pending
+  in_progress
+  completed
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
+model User {
+  id               String    @id @default(cuid())
+  firstName        String    @map("first_name")
+  lastName         String    @map("last_name")
+  email            String    @unique
+  phone            String?
+  password         String
+  role             Role
+  createdAt        DateTime  @default(now()) @map("created_at")
+  createdProjects  Project[] @relation("ProjectCreator")
+  assignedProjects Project[] @relation("ProjectAssignee")
+  createdTasks     Task[]    @relation("TaskCreator")
+  assignedTasks    Task[]    @relation("TaskAssignee")
+  sentMessages     Message[] @relation("MessageSender")
+  receivedMessages Message[] @relation("MessageReceiver")
+
+  @@map("users")
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  title        String
+  description  String
+  createdById  String        @map("created_by")
+  assignedToId String?       @map("assigned_to")
+  status       ProjectStatus @default(pending)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  createdBy    User          @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  assignedTo   User?         @relation("ProjectAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  tasks        Task[]
+
+  @@index([createdById])
+  @@index([assignedToId])
+  @@map("projects")
+}
+
+model Task {
+  id           String       @id @default(cuid())
+  title        String
+  description  String
+  projectId    String       @map("project_id")
+  createdById  String       @map("created_by")
+  assignedToId String?      @map("assigned_to")
+  priority     TaskPriority @default(medium)
+  status       TaskStatus   @default(todo)
+  deadline     DateTime?
+  createdAt    DateTime     @default(now()) @map("created_at")
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  assignedTo   User?        @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([createdById])
+  @@index([assignedToId])
+  @@map("tasks")
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String   @map("sender_id")
+  receiverId String   @map("receiver_id")
+  content    String
+  createdAt  DateTime @default(now()) @map("created_at")
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@map("messages")
+}
