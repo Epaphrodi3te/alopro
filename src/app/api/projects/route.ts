@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
-import { apiError } from "@/lib/api";
+import { apiError, parseDate } from "@/lib/api";
 import { PROJECT_STATUS_OPTIONS } from "@/lib/constants";
 import { requireApiUser } from "@/lib/auth";
 import { canAssignProject, canCreateProject } from "@/lib/permissions";
@@ -11,6 +11,7 @@ import prisma from "@/lib/prisma";
 const createProjectSchema = z.object({
   title: z.string().trim().min(2),
   description: z.string().trim().min(3),
+  deadline: z.string().optional().or(z.literal("")),
   status: z.enum(PROJECT_STATUS_OPTIONS).optional(),
   assignedToId: z.string().cuid().optional().or(z.literal("")),
 });
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
       data: {
         title: parsed.data.title,
         description: parsed.data.description,
+        deadline: parseDate(parsed.data.deadline),
         status: parsed.data.status ?? "pending",
         createdById: user.id,
         assignedToId,

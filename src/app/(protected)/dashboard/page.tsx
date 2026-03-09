@@ -144,7 +144,7 @@ export default async function DashboardPage() {
                   <p className="font-semibold text-slate-900">{task.title}</p>
                   {taskStatusBadge(task.status)}
                 </div>
-                <p className="mt-1 text-sm text-slate-600">Projet: {task.project.title}</p>
+                <p className="mt-1 text-sm text-slate-600">Projet: {task.project ? task.project.title : "Sans projet"}</p>
                 <p className="mt-2 text-xs text-slate-500">
                   Assignee a: {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "-"}
                 </p>

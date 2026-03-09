@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { FiPlus } from "react-icons/fi";
 import { Prisma } from "@prisma/client";
 
 import ProjectsPanel from "@/components/projects/ProjectsPanel";
@@ -63,14 +65,26 @@ export default async function ProjectsPage() {
 
   return (
     <div className="space-y-5">
-      <section>
-        <h1 className="page-title text-slate-900">Projets</h1>
-        <p className="page-subtitle">
-          Gestion des projets avec controle par role et assignation securisee.
-        </p>
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="page-title text-slate-900">Projets</h1>
+          <p className="page-subtitle">
+            Tous les projets sont affiches par date limite de fin, du plus proche au plus lointain.
+          </p>
+        </div>
+        <Link href="/projects/new" className="app-btn-primary">
+          <FiPlus className="text-sm" />
+          Nouveau
+        </Link>
       </section>
 
-      <ProjectsPanel projects={projects} role={user.role} currentUserId={user.id} assignees={assignees} />
+      <ProjectsPanel
+        projects={projects}
+        role={user.role}
+        currentUserId={user.id}
+        assignees={assignees}
+        view="list"
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiEdit2, FiPlusCircle, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiEye, FiPlusCircle, FiShield, FiTrash2, FiUserPlus } from "react-icons/fi";
 import Swal from "sweetalert2";
 
 import DataTable from "@/components/tables/DataTable";
@@ -14,6 +14,8 @@ import { BasicUser } from "@/lib/types";
 type UsersPanelProps = {
   users: BasicUser[];
   currentUserId: string;
+  view?: "all" | "list" | "create";
+  redirectAfterCreate?: string;
 };
 
 const initialForm = {
@@ -25,11 +27,19 @@ const initialForm = {
   role: "agent",
 };
 
-export default function UsersPanel({ users, currentUserId }: UsersPanelProps) {
+export default function UsersPanel({
+  users,
+  currentUserId,
+  view = "all",
+  redirectAfterCreate,
+}: UsersPanelProps) {
   const router = useRouter();
 
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
+
+  const showCreate = view !== "list";
+  const showList = view !== "create";
 
   const sortedUsers = useMemo(
     () => [...users].sort((a, b) => Number(new Date(b.createdAt)) - Number(new Date(a.createdAt))),
@@ -56,6 +66,11 @@ export default function UsersPanel({ users, currentUserId }: UsersPanelProps) {
 
       setForm(initialForm);
       await showSuccess("Utilisateur cree");
+
+      if (redirectAfterCreate) {
+        router.push(redirectAfterCreate);
+      }
+
       router.refresh();
     } catch {
       await showError("Erreur reseau", "Impossible de creer l'utilisateur.");
@@ -177,6 +192,22 @@ export default function UsersPanel({ users, currentUserId }: UsersPanelProps) {
     }
   };
 
+  const viewUserDetails = async (user: BasicUser) => {
+    await Swal.fire({
+      title: "Details utilisateur",
+      html: `
+        <div style="text-align:left;padding:0 6px;">
+          <p><strong>Nom:</strong> ${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</p>
+          <p><strong>Role:</strong> ${escapeHtml(user.role)}</p>
+          <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
+          <p><strong>Telephone:</strong> ${escapeHtml(user.phone ?? "-")}</p>
+          <p><strong>Date de creation:</strong> ${new Date(user.createdAt).toLocaleDateString()}</p>
+        </div>
+      `,
+      confirmButtonText: "Fermer",
+    });
+  };
+
   const deleteUser = async (user: BasicUser) => {
     const confirm = await Swal.fire({
       icon: "warning",
@@ -211,135 +242,174 @@ export default function UsersPanel({ users, currentUserId }: UsersPanelProps) {
 
   return (
     <div className="space-y-6">
-      <section className="app-card p-5">
-        <h2 className="text-lg font-bold text-slate-900">Creer un utilisateur</h2>
+      {showCreate && (
+        <section className="form-shell p-5 md:p-6">
+          <div className="form-shell-header">
+            <span className="form-kicker">
+              <FiShield className="text-[0.74rem]" />
+              ADMIN
+            </span>
+            <h2 className="form-shell-title">Creation de compte utilisateur</h2>
+            <p className="form-shell-subtitle">
+              Ajoutez un nouveau collaborateur avec ses informations de base, son role et un mot de passe provisoire.
+            </p>
+            <div className="form-meta">
+              <span className="form-pill">admin: gestion complete</span>
+              <span className="form-pill">manager: suivi operationnel</span>
+              <span className="form-pill">agent: execution quotidienne</span>
+            </div>
+          </div>
 
-        <form className="form-grid mt-4 md:grid-cols-2" onSubmit={handleCreate}>
-          <div className="form-field">
-            <label htmlFor="user-first-name" className="field-label">Prenom</label>
-            <input
-              id="user-first-name"
-              required
-              value={form.firstName}
-              onChange={(event) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
-              placeholder="Ex: Fatou"
-              className="app-input"
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="user-last-name" className="field-label">Nom</label>
-            <input
-              id="user-last-name"
-              required
-              value={form.lastName}
-              onChange={(event) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
-              placeholder="Ex: Adeyemi"
-              className="app-input"
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="user-email" className="field-label">Email</label>
-            <input
-              id="user-email"
-              required
-              type="email"
-              value={form.email}
-              onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-              placeholder="email@entreprise.com"
-              className="app-input"
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="user-phone" className="field-label">Telephone</label>
-            <input
-              id="user-phone"
-              value={form.phone}
-              onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
-              placeholder="+229 00 00 00 00"
-              className="app-input"
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="user-password" className="field-label">Mot de passe</label>
-            <input
-              id="user-password"
-              required
-              type="password"
-              minLength={8}
-              value={form.password}
-              onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-              placeholder="Minimum 8 caracteres"
-              className="app-input"
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="user-role" className="field-label">Role</label>
-            <select
-              id="user-role"
-              value={form.role}
-              onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value }))}
-              className="app-select"
+          <form className="form-grid mt-5 md:grid-cols-2" onSubmit={handleCreate}>
+            <div className="form-field">
+              <label htmlFor="user-first-name" className="field-label">Prenom</label>
+              <input
+                id="user-first-name"
+                required
+                value={form.firstName}
+                onChange={(event) => setForm((prev) => ({ ...prev, firstName: event.target.value }))}
+                placeholder="Ex: Fatou"
+                className="app-input"
+                autoComplete="given-name"
+              />
+              <p className="field-help">Le prenom de la personne.</p>
+            </div>
+            <div className="form-field">
+              <label htmlFor="user-last-name" className="field-label">Nom</label>
+              <input
+                id="user-last-name"
+                required
+                value={form.lastName}
+                onChange={(event) => setForm((prev) => ({ ...prev, lastName: event.target.value }))}
+                placeholder="Ex: Adeyemi"
+                className="app-input"
+                autoComplete="family-name"
+              />
+              <p className="field-help">Le nom de famille officiel.</p>
+            </div>
+            <div className="form-field">
+              <label htmlFor="user-email" className="field-label">Email</label>
+              <input
+                id="user-email"
+                required
+                type="email"
+                value={form.email}
+                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                placeholder="email@entreprise.com"
+                className="app-input"
+                autoComplete="email"
+              />
+              <p className="field-help">Utilise pour la connexion et les notifications.</p>
+            </div>
+            <div className="form-field">
+              <label htmlFor="user-phone" className="field-label">Telephone</label>
+              <input
+                id="user-phone"
+                value={form.phone}
+                onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
+                placeholder="+229 00 00 00 00"
+                className="app-input"
+                autoComplete="tel"
+              />
+              <p className="field-help">Optionnel, utile pour le support interne.</p>
+            </div>
+            <div className="form-field">
+              <label htmlFor="user-password" className="field-label">Mot de passe</label>
+              <input
+                id="user-password"
+                required
+                type="password"
+                minLength={8}
+                value={form.password}
+                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                placeholder="Minimum 8 caracteres"
+                className="app-input"
+                autoComplete="new-password"
+              />
+              <p className="field-help">Minimum 8 caracteres.</p>
+            </div>
+            <div className="form-field">
+              <label htmlFor="user-role" className="field-label">Role</label>
+              <select
+                id="user-role"
+                value={form.role}
+                onChange={(event) => setForm((prev) => ({ ...prev, role: event.target.value }))}
+                className="app-select"
+              >
+                <option value="admin">admin - acces total</option>
+                <option value="manager">manager - pilotage equipes</option>
+                <option value="agent">agent - execution taches</option>
+              </select>
+              <p className="field-help">Definit les permissions sur la plateforme.</p>
+            </div>
+
+            <div className="form-note md:col-span-2">
+              Le compte sera cree immediatement. Transmettez ensuite le mot de passe de facon securisee a
+              l'utilisateur.
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="app-btn-primary w-full md:col-span-2 md:w-fit"
             >
-              <option value="admin">admin</option>
-              <option value="manager">manager</option>
-              <option value="agent">agent</option>
-            </select>
-          </div>
+              {loading ? <FiPlusCircle className="text-sm" /> : <FiUserPlus className="text-sm" />}
+              {loading ? "Creation..." : "Creer le compte"}
+            </button>
+          </form>
+        </section>
+      )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="app-btn-primary w-full md:w-fit"
+      {showList && (
+        <section>
+          <DataTable
+            columns={["Nom", "Role", "Actions"]}
+            emptyLabel="Aucun utilisateur trouve."
+            hasRows={sortedUsers.length > 0}
           >
-            <FiPlusCircle className="text-sm" />
-            {loading ? "Creation..." : "Creer"}
-          </button>
-        </form>
-      </section>
-
-      <section>
-        <DataTable
-          columns={["Nom", "Email", "Role", "Telephone", "Date", "Actions"]}
-          emptyLabel="Aucun utilisateur trouve."
-          hasRows={sortedUsers.length > 0}
-        >
-          {sortedUsers.map((user) => (
-            <tr key={user.id} className="border-t border-slate-200">
-              <td data-label="Nom" className="px-4 py-3 font-semibold text-slate-900">{user.firstName} {user.lastName}</td>
-              <td data-label="Email" className="px-4 py-3">{user.email}</td>
-              <td data-label="Role" className="px-4 py-3">
-                <Badge
-                  label={user.role}
-                  variant={user.role === "admin" ? "admin" : user.role === "manager" ? "manager" : "agent"}
-                />
-              </td>
-              <td data-label="Telephone" className="px-4 py-3">{user.phone ?? "-"}</td>
-              <td data-label="Date" className="px-4 py-3">{new Date(user.createdAt).toLocaleDateString()}</td>
-              <td data-label="Actions" className="px-4 py-3">
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => editUser(user)}
-                    className="app-btn-soft"
-                  >
-                    <FiEdit2 className="text-xs" />
-                    Modifier
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteUser(user)}
-                    disabled={user.id === currentUserId}
-                    className="app-btn-danger"
-                  >
-                    <FiTrash2 className="text-xs" />
-                    Supprimer
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      </section>
+            {sortedUsers.map((user) => (
+              <tr key={user.id} className="border-t border-slate-200">
+                <td data-label="Nom" className="px-4 py-3 font-semibold text-slate-900">{user.firstName} {user.lastName}</td>
+                <td data-label="Role" className="px-4 py-3">
+                  <Badge
+                    label={user.role}
+                    variant={user.role === "admin" ? "admin" : user.role === "manager" ? "manager" : "agent"}
+                  />
+                </td>
+                <td data-label="Actions" className="px-4 py-3">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => viewUserDetails(user)}
+                      className="app-btn-soft"
+                    >
+                      <FiEye className="text-xs" />
+                      Voir details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => editUser(user)}
+                      className="app-btn-soft"
+                    >
+                      <FiEdit2 className="text-xs" />
+                      Modifier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteUser(user)}
+                      disabled={user.id === currentUserId}
+                      className="app-btn-danger"
+                    >
+                      <FiTrash2 className="text-xs" />
+                      Supprimer
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        </section>
+      )}
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { FiPlus } from "react-icons/fi";
 import { Prisma } from "@prisma/client";
 
 import TasksPanel from "@/components/tasks/TasksPanel";
@@ -84,14 +86,20 @@ export default async function TasksPage() {
 
   return (
     <div className="space-y-5">
-      <section>
-        <h1 className="page-title text-slate-900">Taches</h1>
-        <p className="page-subtitle">
-          Creation, suivi, assignation et execution des taches selon votre role.
-        </p>
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="page-title text-slate-900">Taches</h1>
+          <p className="page-subtitle">
+            Liste complete des taches. Cliquez sur Nouveau pour ouvrir le formulaire de creation.
+          </p>
+        </div>
+        <Link href="/tasks/new" className="app-btn-primary">
+          <FiPlus className="text-sm" />
+          Nouveau
+        </Link>
       </section>
 
-      <TasksPanel tasks={tasks} role={user.role} projects={projects} agents={agents} />
+      <TasksPanel tasks={tasks} role={user.role} projects={projects} agents={agents} view="list" />
     </div>
   );
 }

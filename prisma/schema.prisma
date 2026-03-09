@@ -54,6 +54,7 @@ model Project {
   id           String        @id @default(cuid())
   title        String
   description  String
+  deadline     DateTime?     @map("deadline")
   createdById  String        @map("created_by")
   assignedToId String?       @map("assigned_to")
   status       ProjectStatus @default(pending)
@@ -71,14 +72,14 @@ model Task {
   id           String       @id @default(cuid())
   title        String
   description  String
-  projectId    String       @map("project_id")
+  projectId    String?      @map("project_id")
   createdById  String       @map("created_by")
   assignedToId String?      @map("assigned_to")
   priority     TaskPriority @default(medium)
   status       TaskStatus   @default(todo)
   deadline     DateTime?
   createdAt    DateTime     @default(now()) @map("created_at")
-  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project      Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
   createdBy    User         @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
   assignedTo   User?        @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
 

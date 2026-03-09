@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { FiPlus } from "react-icons/fi";
 import { redirect } from "next/navigation";
 
 import UsersPanel from "@/components/users/UsersPanel";
@@ -26,14 +28,20 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-5">
-      <section>
-        <h1 className="page-title text-slate-900">Gestion des utilisateurs</h1>
-        <p className="page-subtitle">
-          Creation, edition et suppression des comptes (admin uniquement).
-        </p>
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="page-title text-slate-900">Gestion des utilisateurs</h1>
+          <p className="page-subtitle">
+            Liste complete des comptes. Utilisez le bouton Nouveau pour ouvrir le formulaire de creation.
+          </p>
+        </div>
+        <Link href="/users/new" className="app-btn-primary">
+          <FiPlus className="text-sm" />
+          Nouveau
+        </Link>
       </section>
 
-      <UsersPanel users={users} currentUserId={current.id} />
+      <UsersPanel users={users} currentUserId={current.id} view="list" />
     </div>
   );
 }

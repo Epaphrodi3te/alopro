@@ -1,6 +1,10 @@
 import { Role } from "@prisma/client";
 
+export type NavKey = "dashboard" | "users" | "projects" | "tasks" | "messages" | "settings";
+export type NavNotificationCounts = Partial<Record<NavKey, number>>;
+
 export type NavItem = {
+  key: NavKey;
   href: string;
   label: string;
 };
@@ -20,30 +24,30 @@ export function getRoleLabel(role: Role) {
 export function getMenuByRole(role: Role): NavItem[] {
   if (role === "admin") {
     return [
-      { href: "/dashboard", label: "Accueil" },
-      { href: "/users", label: "Gestion des utilisateurs" },
-      { href: "/projects", label: "Projets" },
-      { href: "/tasks", label: "Taches" },
-      { href: "/messages", label: "Messages" },
-      { href: "/settings", label: "Parametres" },
+      { key: "dashboard", href: "/dashboard", label: "Accueil" },
+      { key: "users", href: "/users", label: "Gestion des utilisateurs" },
+      { key: "projects", href: "/projects", label: "Projets" },
+      { key: "tasks", href: "/tasks", label: "Taches" },
+      { key: "messages", href: "/messages", label: "Messages" },
+      { key: "settings", href: "/settings", label: "Parametres" },
     ];
   }
 
   if (role === "manager") {
     return [
-      { href: "/dashboard", label: "Dashboard" },
-      { href: "/projects", label: "Projets" },
-      { href: "/tasks", label: "Taches" },
-      { href: "/messages", label: "Messages" },
-      { href: "/settings", label: "Parametres" },
+      { key: "dashboard", href: "/dashboard", label: "Dashboard" },
+      { key: "projects", href: "/projects", label: "Projets" },
+      { key: "tasks", href: "/tasks", label: "Taches" },
+      { key: "messages", href: "/messages", label: "Messages" },
+      { key: "settings", href: "/settings", label: "Parametres" },
     ];
   }
 
   return [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/projects", label: "Projets assignes" },
-    { href: "/tasks", label: "Taches assignees" },
-    { href: "/messages", label: "Messages" },
-    { href: "/settings", label: "Parametres" },
+    { key: "dashboard", href: "/dashboard", label: "Dashboard" },
+    { key: "projects", href: "/projects", label: "Projets assignes" },
+    { key: "tasks", href: "/tasks", label: "Taches assignees" },
+    { key: "messages", href: "/messages", label: "Messages" },
+    { key: "settings", href: "/settings", label: "Parametres" },
   ];
 }

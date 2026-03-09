@@ -6,12 +6,13 @@ import { Role } from "@prisma/client";
 import { IconType } from "react-icons";
 import { FiCheckSquare, FiFolder, FiGrid, FiMessageCircle, FiSettings, FiUsers, FiX } from "react-icons/fi";
 
-import { getMenuByRole, getRoleLabel } from "@/lib/navigation";
+import { getMenuByRole, getRoleLabel, NavNotificationCounts } from "@/lib/navigation";
 
 type SidebarProps = {
   role: Role;
   firstName: string;
   lastName: string;
+  notificationCounts: NavNotificationCounts;
   mobileOpen: boolean;
   desktopCollapsed: boolean;
   onCloseMobile: () => void;
@@ -21,6 +22,7 @@ export default function Sidebar({
   role,
   firstName,
   lastName,
+  notificationCounts,
   mobileOpen,
   desktopCollapsed,
   onCloseMobile,
@@ -76,6 +78,9 @@ export default function Sidebar({
         {menu.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = iconByPath[item.href] ?? FiGrid;
+          const rawBadgeCount = notificationCounts[item.key] ?? 0;
+          const hasBadge = rawBadgeCount > 0;
+          const badgeCountLabel = rawBadgeCount > 99 ? "99+" : String(rawBadgeCount);
 
           return (
             <Link
@@ -91,8 +96,22 @@ export default function Sidebar({
                   : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
               }`}
             >
-              <Icon className="text-[18px]" />
+              <span className="relative inline-flex">
+                <Icon className="text-[18px]" />
+                {hasBadge && desktopCollapsed && (
+                  <span className="absolute -right-1 -top-1 hidden h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white md:inline-block" />
+                )}
+              </span>
               <span className={`${desktopCollapsed ? "md:hidden" : ""}`}>{item.label}</span>
+              {hasBadge && (
+                <span
+                  className={`ml-auto inline-flex min-w-[1.45rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                    active ? "bg-rose-500 text-white" : "bg-rose-600 text-white"
+                  } ${desktopCollapsed ? "md:hidden" : ""}`}
+                >
+                  {badgeCountLabel}
+                </span>
+              )}
             </Link>
           );
         })}
