@@ -17,11 +17,14 @@ type ProjectsPanelProps = {
   role: Role;
   currentUserId: string;
   assignees: UserLight[];
+  view?: "all" | "list" | "create";
+  redirectAfterCreate?: string;
 };
 
 const initialForm = {
   title: "",
   description: "",
+  deadline: "",
   status: "pending",
   assignedToId: "",
 };
@@ -38,13 +41,33 @@ function statusBadge(status: "pending" | "in_progress" | "completed") {
   return <Badge label="completed" variant="done" />;
 }
 
-export default function ProjectsPanel({ projects, role, currentUserId, assignees }: ProjectsPanelProps) {
+export default function ProjectsPanel({
+  projects,
+  role,
+  currentUserId,
+  assignees,
+  view = "all",
+  redirectAfterCreate,
+}: ProjectsPanelProps) {
   const router = useRouter();
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
 
+  const showCreate = view !== "list";
+  const showList = view !== "create";
+
   const sortedProjects = useMemo(
-    () => [...projects].sort((a, b) => Number(new Date(b.createdAt)) - Number(new Date(a.createdAt))),
+    () =>
+      [...projects].sort((a, b) => {
+        const aDeadline = a.deadline ? new Date(a.deadline).getTime() : Number.POSITIVE_INFINITY;
+        const bDeadline = b.deadline ? new Date(b.deadline).getTime() : Number.POSITIVE_INFINITY;
+
+        if (aDeadline !== bDeadline) {
+          return aDeadline - bDeadline;
+        }
+
+        return Number(new Date(b.createdAt)) - Number(new Date(a.createdAt));
+      }),
     [projects],
   );
 
@@ -73,6 +96,11 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
 
       setForm(initialForm);
       await showSuccess("Projet cree");
+
+      if (redirectAfterCreate) {
+        router.push(redirectAfterCreate);
+      }
+
       router.refresh();
     } catch {
       await showError("Erreur reseau", "Impossible de creer le projet.");
@@ -100,6 +128,9 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
       html: `
         <input id="swal-title" class="swal2-input" placeholder="Titre" value="${escapeHtml(project.title)}">
         <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${escapeHtml(project.description)}</textarea>
+        <input id="swal-deadline" type="date" class="swal2-input" value="${
+          project.deadline ? new Date(project.deadline).toISOString().slice(0, 10) : ""
+        }">
         <select id="swal-status" class="swal2-input">
           <option value="pending" ${project.status === "pending" ? "selected" : ""}>pending</option>
           <option value="in_progress" ${project.status === "in_progress" ? "selected" : ""}>in_progress</option>
@@ -116,6 +147,7 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
       preConfirm: () => {
         const title = (document.getElementById("swal-title") as HTMLInputElement)?.value;
         const description = (document.getElementById("swal-description") as HTMLTextAreaElement)?.value;
+        const deadline = (document.getElementById("swal-deadline") as HTMLInputElement)?.value;
         const status = (document.getElementById("swal-status") as HTMLSelectElement)?.value;
         const assignedToId = canAssignProject
           ? (document.getElementById("swal-assignee") as HTMLSelectElement)?.value
@@ -129,6 +161,7 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
         return {
           title,
           description,
+          deadline,
           status,
           assignedToId,
         };
@@ -199,132 +232,150 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
 
   return (
     <div className="space-y-6">
-      <section className="app-card p-5">
-        <h2 className="text-lg font-bold text-slate-900">Creer un projet</h2>
+      {showCreate && (
+        <section className="app-card p-5">
+          <h2 className="text-lg font-bold text-slate-900">Creer un projet</h2>
 
-        <form className="form-grid mt-4 md:grid-cols-2" onSubmit={submitCreate}>
-          <div className="form-field">
-            <label htmlFor="project-title" className="field-label">Titre du projet</label>
-            <input
-              id="project-title"
-              required
-              value={form.title}
-              onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-              placeholder="Ex: Refonte site vitrine"
-              className="app-input"
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="project-status" className="field-label">Statut</label>
-            <select
-              id="project-status"
-              value={form.status}
-              onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
-              className="app-select"
-            >
-              <option value="pending">pending</option>
-              <option value="in_progress">in_progress</option>
-              <option value="completed">completed</option>
-            </select>
-          </div>
-
-          <div className="form-field md:col-span-2">
-            <label htmlFor="project-description" className="field-label">Description</label>
-            <textarea
-              id="project-description"
-              required
-              value={form.description}
-              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="Objectifs, contexte et livrables..."
-              className="app-textarea"
-              rows={3}
-            />
-          </div>
-
-          {canAssignProject && (
+          <form className="form-grid mt-4 md:grid-cols-2" onSubmit={submitCreate}>
             <div className="form-field">
-              <label htmlFor="project-assignee" className="field-label">Assigner a</label>
+              <label htmlFor="project-title" className="field-label">Titre du projet</label>
+              <input
+                id="project-title"
+                required
+                value={form.title}
+                onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                placeholder="Ex: Refonte site vitrine"
+                className="app-input"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="project-status" className="field-label">Statut</label>
               <select
-                id="project-assignee"
-                value={form.assignedToId}
-                onChange={(event) => setForm((prev) => ({ ...prev, assignedToId: event.target.value }))}
+                id="project-status"
+                value={form.status}
+                onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
                 className="app-select"
               >
-                <option value="">Aucune assignation</option>
-                {assignees.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName} ({user.role})
-                  </option>
-                ))}
+                <option value="pending">pending</option>
+                <option value="in_progress">in_progress</option>
+                <option value="completed">completed</option>
               </select>
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="app-btn-primary w-full md:w-fit"
+            <div className="form-field">
+              <label htmlFor="project-deadline" className="field-label">Date limite</label>
+              <input
+                id="project-deadline"
+                type="date"
+                value={form.deadline}
+                onChange={(event) => setForm((prev) => ({ ...prev, deadline: event.target.value }))}
+                className="app-input"
+              />
+            </div>
+
+            <div className="form-field md:col-span-2">
+              <label htmlFor="project-description" className="field-label">Description</label>
+              <textarea
+                id="project-description"
+                required
+                value={form.description}
+                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="Objectifs, contexte et livrables..."
+                className="app-textarea"
+                rows={3}
+              />
+            </div>
+
+            {canAssignProject && (
+              <div className="form-field">
+                <label htmlFor="project-assignee" className="field-label">Assigner a</label>
+                <select
+                  id="project-assignee"
+                  value={form.assignedToId}
+                  onChange={(event) => setForm((prev) => ({ ...prev, assignedToId: event.target.value }))}
+                  className="app-select"
+                >
+                  <option value="">Aucune assignation</option>
+                  {assignees.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.firstName} {user.lastName} ({user.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="app-btn-primary w-full md:w-fit"
+            >
+              <FiPlusCircle className="text-sm" />
+              {loading ? "Creation..." : "Creer"}
+            </button>
+          </form>
+        </section>
+      )}
+
+      {showList && (
+        <section>
+          <DataTable
+            columns={["Titre", "Date limite", "Statut", "Cree par", "Assigne a", "Taches", "Date", "Actions"]}
+            emptyLabel="Aucun projet trouve."
+            hasRows={sortedProjects.length > 0}
           >
-            <FiPlusCircle className="text-sm" />
-            {loading ? "Creation..." : "Creer"}
-          </button>
-        </form>
-      </section>
+            {sortedProjects.map((project) => {
+              const canEdit = role === "admin" || (role === "manager" && project.createdById === currentUserId);
+              const canDelete = role === "admin";
 
-      <section>
-        <DataTable
-          columns={["Titre", "Statut", "Cree par", "Assigne a", "Taches", "Date", "Actions"]}
-          emptyLabel="Aucun projet trouve."
-          hasRows={sortedProjects.length > 0}
-        >
-          {sortedProjects.map((project) => {
-            const canEdit = role === "admin" || (role === "manager" && project.createdById === currentUserId);
-            const canDelete = role === "admin";
-
-            return (
-              <tr key={project.id} className="border-t border-slate-200">
-                <td data-label="Titre" className="px-4 py-3">
-                  <p className="font-semibold text-slate-900">{project.title}</p>
-                  <p className="max-w-xs text-xs text-slate-500">{project.description}</p>
-                </td>
-                <td data-label="Statut" className="px-4 py-3">{statusBadge(project.status)}</td>
-                <td data-label="Cree par" className="px-4 py-3">
-                  {project.createdBy.firstName} {project.createdBy.lastName}
-                </td>
-                <td data-label="Assigne a" className="px-4 py-3">
-                  {project.assignedTo
-                    ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}`
-                    : "-"}
-                </td>
-                <td data-label="Taches" className="px-4 py-3">{project._count.tasks}</td>
-                <td data-label="Date" className="px-4 py-3">{new Date(project.createdAt).toLocaleDateString()}</td>
-                <td data-label="Actions" className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => editProject(project)}
-                      disabled={!canEdit}
-                      className="app-btn-soft"
-                    >
-                      <FiEdit2 className="text-xs" />
-                      Modifier
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteProject(project)}
-                      disabled={!canDelete}
-                      className="app-btn-danger"
-                    >
-                      <FiTrash2 className="text-xs" />
-                      Supprimer
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </DataTable>
-      </section>
+              return (
+                <tr key={project.id} className="border-t border-slate-200">
+                  <td data-label="Titre" className="px-4 py-3">
+                    <p className="font-semibold text-slate-900">{project.title}</p>
+                    <p className="max-w-xs text-xs text-slate-500">{project.description}</p>
+                  </td>
+                  <td data-label="Date limite" className="px-4 py-3">
+                    {project.deadline ? new Date(project.deadline).toLocaleDateString() : "-"}
+                  </td>
+                  <td data-label="Statut" className="px-4 py-3">{statusBadge(project.status)}</td>
+                  <td data-label="Cree par" className="px-4 py-3">
+                    {project.createdBy.firstName} {project.createdBy.lastName}
+                  </td>
+                  <td data-label="Assigne a" className="px-4 py-3">
+                    {project.assignedTo
+                      ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}`
+                      : "-"}
+                  </td>
+                  <td data-label="Taches" className="px-4 py-3">{project._count.tasks}</td>
+                  <td data-label="Date" className="px-4 py-3">{new Date(project.createdAt).toLocaleDateString()}</td>
+                  <td data-label="Actions" className="px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => editProject(project)}
+                        disabled={!canEdit}
+                        className="app-btn-soft"
+                      >
+                        <FiEdit2 className="text-xs" />
+                        Modifier
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteProject(project)}
+                        disabled={!canDelete}
+                        className="app-btn-danger"
+                      >
+                        <FiTrash2 className="text-xs" />
+                        Supprimer
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </DataTable>
+        </section>
+      )}
     </div>
   );
 }

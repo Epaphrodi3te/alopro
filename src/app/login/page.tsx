@@ -14,11 +14,11 @@ export default async function LoginPage() {
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-100 px-4 py-10">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_88%_12%,rgba(14,165,233,0.16),transparent_35%),radial-gradient(circle_at_12%_90%,rgba(20,184,166,0.2),transparent_35%)]" />
 
-      <section className="relative w-full max-w-md rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-[0_26px_60px_-28px_rgba(3,15,34,0.55)]">
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">AloPro</p>
-        <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Connexion</h1>
-        <p className="mt-1 text-sm leading-relaxed text-slate-600">
-          Plateforme interne de gestion des projets, taches et messages.
+      <section className="form-shell relative w-full max-w-md p-8 md:p-9">
+        <span className="form-kicker">AloPro access</span>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">Connexion</h1>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+          Espace interne pour piloter les projets, taches et communications d'equipe.
         </p>
 
         <div className="mt-6">

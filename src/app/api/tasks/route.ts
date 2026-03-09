@@ -14,7 +14,7 @@ import prisma from "@/lib/prisma";
 const createTaskSchema = z.object({
   title: z.string().trim().min(2),
   description: z.string().trim().min(3),
-  projectId: z.string().cuid(),
+  projectId: z.string().cuid().optional().or(z.literal("")),
   priority: z.enum(TASK_PRIORITY_OPTIONS).optional(),
   status: z.enum(TASK_STATUS_OPTIONS).optional(),
   deadline: z.string().optional().or(z.literal("")),
@@ -101,25 +101,30 @@ export async function POST(request: NextRequest) {
       return apiError("Donnees de tache invalides.", 400);
     }
 
-    const project = await prisma.project.findUnique({
-      where: { id: parsed.data.projectId },
-      select: {
-        id: true,
-        createdById: true,
-        assignedToId: true,
-      },
-    });
+    const normalizedProjectId = parsed.data.projectId || null;
+    let project: { id: string; createdById: string; assignedToId: string | null } | null = null;
 
-    if (!project) {
-      return apiError("Projet introuvable.", 404);
-    }
+    if (normalizedProjectId) {
+      project = await prisma.project.findUnique({
+        where: { id: normalizedProjectId },
+        select: {
+          id: true,
+          createdById: true,
+          assignedToId: true,
+        },
+      });
 
-    if (user.role === "manager" && !canManagerAccessProject(user.id, project)) {
-      return apiError("Vous ne pouvez creer une tache que sur vos projets.", 403);
-    }
+      if (!project) {
+        return apiError("Projet introuvable.", 404);
+      }
 
-    if (user.role === "agent" && project.assignedToId !== user.id) {
-      return apiError("Un agent ne peut creer une tache que sur un projet qui lui est assigne.", 403);
+      if (user.role === "manager" && !canManagerAccessProject(user.id, project)) {
+        return apiError("Vous ne pouvez creer une tache que sur vos projets.", 403);
+      }
+
+      if (user.role === "agent" && project.assignedToId !== user.id) {
+        return apiError("Un agent ne peut creer une tache que sur un projet qui lui est assigne.", 403);
+      }
     }
 
     let assignedToId: string | null = null;
@@ -154,7 +159,7 @@ export async function POST(request: NextRequest) {
       data: {
         title: parsed.data.title,
         description: parsed.data.description,
-        projectId: parsed.data.projectId,
+        projectId: normalizedProjectId,
         createdById: user.id,
         assignedToId,
         priority: parsed.data.priority ?? "medium",

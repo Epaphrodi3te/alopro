@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { FiPlus } from "react-icons/fi";
+
 import MessagesPanel from "@/components/messages/MessagesPanel";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -46,14 +49,20 @@ export default async function MessagesPage() {
 
   return (
     <div className="space-y-5">
-      <section>
-        <h1 className="page-title text-slate-900">Messages</h1>
-        <p className="page-subtitle">
-          Messagerie interne simple pour la collaboration entre equipes.
-        </p>
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="page-title text-slate-900">Messages</h1>
+          <p className="page-subtitle">
+            Historique des conversations. Cliquez sur Nouveau pour rediger un message.
+          </p>
+        </div>
+        <Link href="/messages/new" className="app-btn-primary">
+          <FiPlus className="text-sm" />
+          Nouveau
+        </Link>
       </section>
 
-      <MessagesPanel messages={messages} users={users} currentUserId={user.id} />
+      <MessagesPanel messages={messages} users={users} currentUserId={user.id} view="list" />
     </div>
   );
 }

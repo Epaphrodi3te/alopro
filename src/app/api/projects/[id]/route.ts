@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { apiError } from "@/lib/api";
+import { apiError, parseDate } from "@/lib/api";
 import { PROJECT_STATUS_OPTIONS } from "@/lib/constants";
 import { requireApiUser } from "@/lib/auth";
 import { canAssignProject, canDeleteProject, canEditProject } from "@/lib/permissions";
@@ -10,6 +10,7 @@ import prisma from "@/lib/prisma";
 const updateProjectSchema = z.object({
   title: z.string().trim().min(2).optional(),
   description: z.string().trim().min(3).optional(),
+  deadline: z.string().optional().or(z.literal("")),
   status: z.enum(PROJECT_STATUS_OPTIONS).optional(),
   assignedToId: z.string().cuid().optional().nullable().or(z.literal("")),
 });
@@ -46,6 +47,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const data: {
       title?: string;
       description?: string;
+      deadline?: Date | null;
       status?: (typeof PROJECT_STATUS_OPTIONS)[number];
       assignedToId?: string | null;
     } = {};
@@ -56,6 +58,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
     if (parsed.data.description) {
       data.description = parsed.data.description;
+    }
+
+    if (parsed.data.deadline !== undefined) {
+      data.deadline = parseDate(parsed.data.deadline);
     }
 
     if (parsed.data.status) {
