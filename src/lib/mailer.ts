@@ -1,5 +1,8 @@
+import path from "node:path";
 import nodemailer from "nodemailer";
 
+const MAIL_LOGO_CID = "alopro-logo";
+const MAIL_LOGO_PATH = path.join(process.cwd(), "src/assets/img/alopro-logo.jpeg");
 type MessageNotificationPayload = {
   receiverEmail: string;
   receiverName: string;
@@ -52,6 +55,7 @@ export async function sendMessageNotificationEmail(payload: MessageNotificationP
   const safeReceiverName = escapeHtml(payload.receiverName);
   const safeSenderName = escapeHtml(payload.senderName);
 
+
   const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port,
@@ -67,6 +71,13 @@ export async function sendMessageNotificationEmail(payload: MessageNotificationP
     to: payload.receiverEmail,
     subject: `AloPro — Message de ${payload.senderName}`,
     text: `Bonjour ${payload.receiverName},\n\n${payload.senderName} vous a envoye un message via AloPro.\n\nMessage:\n${payload.content}\n\nAcceder a AloPro: ${appUrl}\n\n---\nAloPro · Communication interne professionnelle\n`,
+    attachments: [
+      {
+        filename: "alopro-logo.jpeg",
+        path: MAIL_LOGO_PATH,
+        cid: MAIL_LOGO_CID,
+      },
+    ],
     html: `<!DOCTYPE html>
 <html lang="fr" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -80,64 +91,72 @@ export async function sendMessageNotificationEmail(payload: MessageNotificationP
   </noscript>
   <![endif]-->
   <style>
-    /* Reset */
     * { box-sizing: border-box; }
     body, table, td, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse; }
-    img { border: 0; height: auto; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+    img { border: 0; height: auto; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; display: block; }
     body { margin: 0 !important; padding: 0 !important; background-color: #f5f5f5; }
 
-    /* Responsive */
     @media screen and (max-width: 600px) {
-      .email-container { width: 100% !important; margin: 0 !important; border-radius: 0 !important; }
+      .email-container { width: 100% !important; border-radius: 0 !important; }
       .content-padding { padding: 24px 20px !important; }
-      .header-padding { padding: 28px 20px !important; }
-      .footer-padding { padding: 20px !important; }
+      .header-padding { padding: 24px 20px !important; }
+      .footer-padding { padding: 16px 20px 22px !important; }
+      .logo-img { width: 44px !important; height: 44px !important; }
+      h1 { font-size: 18px !important; }
       .btn { display: block !important; text-align: center !important; }
-      h1 { font-size: 20px !important; }
     }
   </style>
 </head>
 <body style="margin:0; padding:0; background-color:#f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
 
-  <!-- Outer wrapper -->
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5; padding: 40px 16px;">
     <tr>
       <td align="center">
 
-        <!-- Email card -->
         <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0"
           style="background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.08); max-width:600px; width:100%;">
 
-          <!-- Header -->
+          <!-- HEADER -->
           <tr>
-            <td class="header-padding" style="padding: 32px 40px; background-color: #0f172a;">
+            <td class="header-padding" style="padding: 28px 40px; background-color: #0f172a;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td>
-                    <p style="margin:0 0 20px; font-size:11px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.45);">AloPro</p>
-                    <h1 style="margin:0 0 8px; font-size:22px; font-weight:600; line-height:1.3; color:#ffffff;">
+                  <!-- Left: text -->
+                  <td style="vertical-align: middle;">
+                    <p style="margin:0 0 4px; font-size:11px; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.4);">Communication interne</p>
+                    <h1 style="margin:0 0 6px; font-size:20px; font-weight:600; line-height:1.3; color:#ffffff;">
                       Nouveau message
                     </h1>
-                    <p style="margin:0; font-size:14px; color:rgba(255,255,255,0.55); line-height:1.5;">
-                      De la part de <strong style="color:rgba(255,255,255,0.8); font-weight:600;">${safeSenderName}</strong>
+                    <p style="margin:0; font-size:13px; color:rgba(255,255,255,0.5); line-height:1.5;">
+                      De la part de <strong style="color:rgba(255,255,255,0.85); font-weight:600;">${safeSenderName}</strong>
                     </p>
+                  </td>
+                  <!-- Right: logo -->
+                  <td style="vertical-align: middle; text-align: right; padding-left: 20px; width: 64px;">
+                    <img
+                      class="logo-img"
+                      src="cid:${MAIL_LOGO_CID}"
+                      alt="AloPro"
+                      width="56"
+                      height="56"
+                      style="width:56px; height:56px; border-radius:10px; object-fit:cover; display:inline-block;"
+                    />
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Divider accent -->
+          <!-- ACCENT LINE -->
           <tr>
             <td style="height:3px; background: linear-gradient(90deg, #3b82f6, #0ea5e9);"></td>
           </tr>
 
-          <!-- Body -->
+          <!-- BODY -->
           <tr>
             <td class="content-padding" style="padding: 36px 40px;">
 
-              <!-- Greeting -->
               <p style="margin:0 0 24px; font-size:15px; color:#374151; line-height:1.6;">
                 Bonjour <strong style="color:#111827;">${safeReceiverName}</strong>,
               </p>
@@ -170,18 +189,23 @@ export async function sendMessageNotificationEmail(payload: MessageNotificationP
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- FOOTER -->
           <tr>
             <td class="footer-padding" style="padding: 20px 40px 28px; border-top:1px solid #f1f5f9; background:#fafafa;">
-              <p style="margin:0 0 4px; font-size:12px; font-weight:600; color:#9ca3af;">AloPro · Communication interne</p>
-              <p style="margin:0; font-size:11px; color:#d1d5db; line-height:1.6;">
-                Cet email a été envoyé automatiquement. Si vous n'êtes pas le destinataire attendu, ignorez ce message.
-              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align: middle;">
+                    <p style="margin:0 0 4px; font-size:12px; font-weight:600; color:#9ca3af;">AloPro · Communication interne</p>
+                    <p style="margin:0; font-size:11px; color:#d1d5db; line-height:1.6;">
+                      Cet email a été envoyé automatiquement. Si vous n'êtes pas le destinataire attendu, ignorez ce message.
+                    </p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
         </table>
-        <!-- /Email card -->
 
       </td>
     </tr>
