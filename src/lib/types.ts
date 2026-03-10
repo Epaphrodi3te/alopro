@@ -1,4 +1,4 @@
-import { Department, ProjectStatus, Role, TaskPriority, TaskStatus } from "@prisma/client";
+import { DeadlineChangeStatus, Department, ProjectStatus, Role, TaskPriority, TaskStatus } from "@prisma/client";
 
 export type BasicUser = {
   id: string;
@@ -23,11 +23,23 @@ export type ProjectItem = {
   id: string;
   title: string;
   description: string;
+  commissionCfa: number | null;
   deadline: Date | null;
   status: ProjectStatus;
   createdAt: Date;
   createdById?: string;
   assignedToId?: string | null;
+  reportRequired: boolean;
+  completionReport: string | null;
+  completedAt: Date | null;
+  receivedAt: Date | null;
+  deadlineValidatedAt: Date | null;
+  progressPercent: number;
+  deadlineChangeStatus: DeadlineChangeStatus;
+  deadlineChangeRequestedDate: Date | null;
+  deadlineChangeReason: string | null;
+  deadlineChangeReviewedAt: Date | null;
+  deadlineChangeReviewedBy: string | null;
   createdBy: UserLight;
   assignedTo: UserLight | null;
   tasks?: Array<{
@@ -42,6 +54,7 @@ export type TaskItem = {
   id: string;
   title: string;
   description: string;
+  commissionCfa: number | null;
   projectId?: string | null;
   createdById?: string;
   assignedToId?: string | null;
@@ -51,6 +64,14 @@ export type TaskItem = {
   receivedAt: Date | null;
   deadlineValidatedAt: Date | null;
   progressPercent: number;
+  reportRequired: boolean;
+  completionReport: string | null;
+  completedAt: Date | null;
+  deadlineChangeStatus: DeadlineChangeStatus;
+  deadlineChangeRequestedDate: Date | null;
+  deadlineChangeReason: string | null;
+  deadlineChangeReviewedAt: Date | null;
+  deadlineChangeReviewedBy: string | null;
   createdAt: Date;
   project: {
     id: string;

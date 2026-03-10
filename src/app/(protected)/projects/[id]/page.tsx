@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FiArrowLeft, FiCalendar, FiCheckSquare, FiClock, FiFolder, FiUser } from "react-icons/fi";
+import { FiArrowLeft, FiBriefcase, FiCalendar, FiCheckCircle, FiClock, FiFileText, FiList, FiTrendingUp, FiUser } from "react-icons/fi";
 
+import ProjectAssignmentWorkflowCard from "@/components/projects/ProjectAssignmentWorkflowCard";
+import ProjectQuickHeaderCard from "@/components/projects/ProjectQuickHeaderCard";
 import Badge from "@/components/ui/Badge";
 import { requireUser } from "@/lib/auth";
+import { canEditProject } from "@/lib/permissions";
 import { canUserViewProject } from "@/lib/project-visibility";
 import prisma from "@/lib/prisma";
 
@@ -17,6 +20,14 @@ function formatDate(value: Date | null) {
   }
 
   return value.toLocaleDateString();
+}
+
+function formatCommission(value: number | null) {
+  if (value === null || value === undefined) {
+    return "Aucune";
+  }
+
+  return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
 }
 
 function projectStatusBadge(status: "pending" | "in_progress" | "completed") {
@@ -41,18 +52,6 @@ function taskStatusBadge(status: "todo" | "in_progress" | "done") {
   }
 
   return <Badge label="done" variant="done" />;
-}
-
-function taskItemSurface(status: "todo" | "in_progress" | "done") {
-  if (status === "todo") {
-    return "border-l-4 border-l-amber-400 bg-[linear-gradient(155deg,#ffffff,#fffbeb)]";
-  }
-
-  if (status === "in_progress") {
-    return "border-l-4 border-l-sky-400 bg-[linear-gradient(155deg,#ffffff,#eff6ff)]";
-  }
-
-  return "border-l-4 border-l-emerald-400 bg-[linear-gradient(155deg,#ffffff,#ecfdf5)]";
 }
 
 export default async function ProjectDetailsPage({ params }: ProjectDetailsPageProps) {
@@ -111,13 +110,36 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
   }
 
   const totalTasks = project.tasks.length;
-  const doneTasks = project.tasks.filter((task) => task.status === "done").length;
-  const progressPercent = totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
+  const averageTaskProgress =
+    totalTasks === 0
+      ? 0
+      : Math.round(project.tasks.reduce((sum, task) => sum + Math.max(0, Math.min(100, task.progressPercent)), 0) / totalTasks);
+  const doneTasks = project.tasks.filter((task) => task.status === "done" || task.progressPercent >= 100).length;
+  const progressDerivedFromTasks = totalTasks > 0;
+  const projectProgressPercent = progressDerivedFromTasks
+    ? averageTaskProgress
+    : Math.max(0, Math.min(100, project.progressPercent));
+  const effectiveProjectStatus: "pending" | "in_progress" | "completed" = progressDerivedFromTasks
+    ? projectProgressPercent >= 100
+      ? "completed"
+      : projectProgressPercent > 0
+        ? "in_progress"
+        : "pending"
+    : project.status;
+  const canEditProjectDetails = canEditProject(
+    { id: current.id, role: current.role },
+    { createdById: project.createdById },
+  );
+  const isAssignee = project.assignedToId === current.id;
+  const canReviewDeadlineChange = current.role === "admin" || project.createdById === current.id;
+  const deadlineChangeRequestedDateLabel = project.deadlineChangeRequestedDate ? formatDate(project.deadlineChangeRequestedDate) : "";
+  const completedAtLabel = project.completedAt ? formatDate(project.completedAt) : "";
+  const projectDeadlineInputValue = project.deadline ? project.deadline.toISOString().slice(0, 10) : "";
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-sky-100 bg-[linear-gradient(145deg,#ffffff,#ecfeff_78%)] p-6 shadow-sm">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-cyan-100 blur-3xl" />
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-[linear-gradient(145deg,#ffffff,#eef4ff)] p-6 shadow-sm">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-blue-100/60 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-3">
             <Link href="/projects" className="app-btn-soft">
@@ -127,110 +149,215 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Detail projet</p>
               <h1 className="mt-2 page-title text-slate-900">{project.title}</h1>
-              <p className="page-subtitle">Vue detaillee du projet, de son avancement et des taches associees.</p>
+              <p className="page-subtitle">Suivi d&apos;execution, validation d&apos;assignation et progression en temps reel.</p>
             </div>
           </div>
           <div className="space-y-2">
-            {projectStatusBadge(project.status)}
+            <div className="flex flex-wrap gap-2">
+              {projectStatusBadge(effectiveProjectStatus)}
+              <Badge label={`${projectProgressPercent}%`} variant="medium" />
+              <Badge
+                label={progressDerivedFromTasks ? "progression liee aux taches" : "progression projet manuelle"}
+                variant={progressDerivedFromTasks ? "progress" : "medium"}
+              />
+            </div>
             <p className="text-xs text-slate-500">Cree le {formatDate(project.createdAt)}</p>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.9fr_1fr]">
-        <article className="rounded-2xl border border-cyan-100 bg-[linear-gradient(160deg,#ffffff,#ecfeff)] p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Description</h2>
-          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{project.description}</p>
+      <ProjectQuickHeaderCard
+        projectId={project.id}
+        projectTitle={project.title}
+        canEdit={canEditProjectDetails}
+        initialTitle={project.title}
+        initialDescription={project.description}
+        initialCommissionCfa={project.commissionCfa}
+        initialDeadline={projectDeadlineInputValue}
+        initialStatus={effectiveProjectStatus}
+        tasks={project.tasks.map((task) => ({
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          progressPercent: task.progressPercent,
+          assignedToName: task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : null,
+        }))}
+      />
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <article className="app-card p-4">
+          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+            <FiTrendingUp />
+            Progression
+          </p>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{projectProgressPercent}%</p>
+          <div className="mt-3 h-2 rounded-full bg-slate-200">
+            <div className="h-full rounded-full bg-slate-900" style={{ width: `${projectProgressPercent}%` }} />
+          </div>
         </article>
 
-        <aside className="space-y-3">
-          <div className="rounded-2xl border border-indigo-100 bg-[linear-gradient(160deg,#ffffff,#eef2ff)] p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Taches</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{totalTasks}</p>
-          </div>
-          <div className="rounded-2xl border border-emerald-100 bg-[linear-gradient(160deg,#ffffff,#ecfdf5)] p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Taches terminees</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{doneTasks}</p>
-          </div>
-          <div className="rounded-2xl border border-sky-100 bg-[linear-gradient(160deg,#ffffff,#eff6ff)] p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Progression</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{progressPercent}%</p>
-            <div className="mt-3 h-2 rounded-full bg-slate-200">
-              <div className="h-full rounded-full bg-slate-800" style={{ width: `${progressPercent}%` }} />
-            </div>
-          </div>
-        </aside>
-      </section>
+        <article className="app-card p-4">
+          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+            <FiList />
+            Taches rattachees
+          </p>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{totalTasks}</p>
+        </article>
 
-      <section className="grid gap-5 lg:grid-cols-3">
-        <article className="rounded-2xl border border-amber-100 bg-[linear-gradient(160deg,#ffffff,#fffbeb)] p-4 shadow-sm">
+        <article className="app-card p-4">
+          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+            <FiCheckCircle />
+            Taches finalisees
+          </p>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{doneTasks}</p>
+        </article>
+
+        <article className="app-card p-4">
           <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
             <FiCalendar />
             Date limite
           </p>
-          <p className="mt-2 font-semibold text-slate-900">{formatDate(project.deadline)}</p>
+          <p className="mt-2 text-base font-semibold text-slate-900">{formatDate(project.deadline)}</p>
         </article>
-        <article className="rounded-2xl border border-violet-100 bg-[linear-gradient(160deg,#ffffff,#f5f3ff)] p-4 shadow-sm">
+
+        <article className="app-card p-4">
           <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-            <FiUser />
-            Cree par
+            <FiBriefcase />
+            Commission
           </p>
-          <p className="mt-2 font-semibold text-slate-900">
-            {project.createdBy.firstName} {project.createdBy.lastName}
-          </p>
-        </article>
-        <article className="rounded-2xl border border-teal-100 bg-[linear-gradient(160deg,#ffffff,#f0fdfa)] p-4 shadow-sm">
-          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-            <FiClock />
-            Assigne a
-          </p>
-          <p className="mt-2 font-semibold text-slate-900">
-            {project.assignedTo ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}` : "Aucune assignation"}
-          </p>
+          <p className="mt-2 text-base font-semibold text-slate-900">{formatCommission(project.commissionCfa)}</p>
         </article>
       </section>
 
-      <section className="app-card p-5">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-slate-900">Taches du projet</h2>
-          <FiCheckSquare className="text-slate-500" />
-        </div>
-        <div className="mt-4 space-y-3">
-          {project.tasks.length === 0 && <p className="text-sm text-slate-500">Aucune tache rattachee a ce projet.</p>}
-          {project.tasks.map((task) => (
-            <div key={task.id} className={`rounded-xl border border-slate-200 p-3.5 ${taskItemSurface(task.status)}`}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-slate-900">{task.title}</p>
-                  <p className="mt-1 text-xs text-slate-500">{task.description}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {taskStatusBadge(task.status)}
-                  <Badge label={task.priority} variant={task.priority} />
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-                <span>Deadline: {formatDate(task.deadline)}</span>
-                <span>
-                  Assignee: {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "-"}
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <Badge label={task.receivedAt ? "recue" : "en attente"} variant={task.receivedAt ? "done" : "pending"} />
-                  <Badge
-                    label={task.deadlineValidatedAt ? "date validee" : "date non validee"}
-                    variant={task.deadlineValidatedAt ? "progress" : "pending"}
-                  />
-                  <Badge label={`${task.progressPercent}%`} variant="medium" />
-                </span>
-                <Link href={`/tasks/${task.id}`} className="inline-flex items-center gap-1 font-semibold text-slate-700 hover:text-slate-900">
-                  <FiFolder className="text-[11px]" />
-                  Voir details
-                </Link>
-              </div>
+      <section id="project-details" className="grid gap-5 xl:grid-cols-[1.75fr_1fr]">
+        <article className="app-card p-5">
+          <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
+            <FiFileText />
+            Description
+          </h2>
+          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{project.description}</p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+                <FiUser />
+                Cree par
+              </p>
+              <p className="mt-1 font-semibold text-slate-900">
+                {project.createdBy.firstName} {project.createdBy.lastName}
+              </p>
             </div>
-          ))}
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+                <FiClock />
+                Assigne a
+              </p>
+              <p className="mt-1 font-semibold text-slate-900">
+                {project.assignedTo ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}` : "Aucune assignation"}
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <aside className="space-y-3">
+          <div className="app-card p-4">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Validation assignment</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Badge label={project.receivedAt ? "projet recu" : "reception en attente"} variant={project.receivedAt ? "done" : "pending"} />
+              <Badge
+                label={project.deadlineValidatedAt ? "date de fin validee" : "date non validee"}
+                variant={project.deadlineValidatedAt ? "progress" : "pending"}
+              />
+            </div>
+          </div>
+
+          <div className="app-card p-4">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Compte rendu</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Badge label={project.reportRequired ? "requis" : "non requis"} variant={project.reportRequired ? "high" : "medium"} />
+              <Badge
+                label={`demande date: ${project.deadlineChangeStatus}`}
+                variant={
+                  project.deadlineChangeStatus === "approved"
+                    ? "done"
+                    : project.deadlineChangeStatus === "rejected"
+                      ? "high"
+                      : "pending"
+                }
+              />
+            </div>
+          </div>
+
+          <div className="app-card p-4">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Origine progression</p>
+            <p className="mt-2 text-sm font-medium text-slate-700">
+              {progressDerivedFromTasks
+                ? "La progression est automatiquement calculee a partir des taches liees."
+                : "La progression est mise a jour directement au niveau du projet."}
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section className="app-card p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-slate-900">Taches de ce projet</h2>
+          <Badge label={`${totalTasks} tache${totalTasks > 1 ? "s" : ""}`} variant="medium" />
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {project.tasks.length === 0 ? (
+            <p className="text-sm text-slate-500">Aucune tache rattachee a ce projet.</p>
+          ) : (
+            project.tasks.map((task) => {
+              const taskProgress = Math.max(0, Math.min(100, task.progressPercent));
+
+              return (
+                <Link
+                  key={task.id}
+                  href={`/tasks/${task.id}`}
+                  className="block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-300"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-slate-900">{task.title}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Assigne: {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "-"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {taskStatusBadge(task.status)}
+                      <Badge label={`${taskProgress}%`} variant="medium" />
+                    </div>
+                  </div>
+                  <div className="mt-3 h-2 rounded-full bg-slate-200">
+                    <div className="h-full rounded-full bg-slate-900" style={{ width: `${taskProgress}%` }} />
+                  </div>
+                </Link>
+              );
+            })
+          )}
         </div>
       </section>
+
+      <ProjectAssignmentWorkflowCard
+        projectId={project.id}
+        assignedToId={project.assignedToId}
+        isAssignee={isAssignee}
+        canReviewDeadlineChange={canReviewDeadlineChange}
+        reportRequired={project.reportRequired}
+        initialProgressPercent={projectProgressPercent}
+        initialCompletionReport={project.completionReport}
+        initialCompletedAtLabel={completedAtLabel}
+        initialDeadlineChangeStatus={project.deadlineChangeStatus}
+        initialDeadlineChangeRequestedDateLabel={deadlineChangeRequestedDateLabel}
+        initialDeadlineChangeReason={project.deadlineChangeReason}
+        initialReceived={Boolean(project.receivedAt)}
+        initialDeadlineValidated={Boolean(project.deadlineValidatedAt)}
+        deadlineLabel={formatDate(project.deadline)}
+        progressDerivedFromTasks={progressDerivedFromTasks}
+        linkedTasksCount={totalTasks}
+      />
     </div>
   );
 }

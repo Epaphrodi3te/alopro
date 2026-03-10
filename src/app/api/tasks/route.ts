@@ -9,6 +9,7 @@ import {
 } from "@/lib/constants";
 import { requireApiUser } from "@/lib/auth";
 import { canAssignTask, canCreateTask } from "@/lib/permissions";
+import { syncProjectProgressFromTasks } from "@/lib/project-progress";
 import { canUserViewProject } from "@/lib/project-visibility";
 import { getTaskVisibilityWhereForUser } from "@/lib/task-visibility";
 import prisma from "@/lib/prisma";
@@ -21,7 +22,26 @@ const createTaskSchema = z.object({
   status: z.enum(TASK_STATUS_OPTIONS).optional(),
   deadline: z.string().optional().or(z.literal("")),
   assignedToId: z.string().cuid().optional().or(z.literal("")),
+  reportRequired: z.boolean().optional(),
+  commissionCfa: z.union([z.number().int().min(0), z.string().trim().regex(/^\d+$/), z.literal(""), z.null()]).optional(),
 });
+
+function parseCommissionCfa(value: unknown) {
+  if (value === undefined) {
+    return null;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
 
 function canAssignTaskToRole(actorRole: Role, assigneeRole: Role) {
   if (actorRole === "admin") {
@@ -141,6 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     let assignedToId: string | null = null;
+    const reportRequired = user.role === "admin" ? Boolean(parsed.data.reportRequired) : false;
 
     if (user.role === "agent") {
       // Agents cannot assign tasks to others; self-assignment preserves visibility rules.
@@ -172,12 +193,14 @@ export async function POST(request: NextRequest) {
       data: {
         title: parsed.data.title,
         description: parsed.data.description,
+        commissionCfa: parseCommissionCfa(parsed.data.commissionCfa),
         projectId: normalizedProjectId,
         createdById: user.id,
         assignedToId,
         priority: parsed.data.priority ?? "medium",
         status: parsed.data.status ?? "todo",
         deadline: parseDate(parsed.data.deadline),
+        reportRequired,
         receivedAt: null,
         deadlineValidatedAt: null,
         progressPercent: 0,
@@ -208,6 +231,10 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    if (task.projectId) {
+      await syncProjectProgressFromTasks(prisma, task.projectId);
+    }
 
     return NextResponse.json({ message: "Tache creee.", task }, { status: 201 });
   } catch {

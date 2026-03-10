@@ -37,6 +37,13 @@ enum TaskStatus {
   done
 }
 
+enum DeadlineChangeStatus {
+  none
+  pending
+  approved
+  rejected
+}
+
 model User {
   id               String    @id @default(cuid())
   firstName        String    @map("first_name")
@@ -58,17 +65,30 @@ model User {
 }
 
 model Project {
-  id           String        @id @default(cuid())
-  title        String
-  description  String
-  deadline     DateTime?     @map("deadline")
-  createdById  String        @map("created_by")
-  assignedToId String?       @map("assigned_to")
-  status       ProjectStatus @default(pending)
-  createdAt    DateTime      @default(now()) @map("created_at")
-  createdBy    User          @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  assignedTo   User?         @relation("ProjectAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  tasks        Task[]
+  id                        String               @id @default(cuid())
+  title                     String
+  description               String
+  commissionCfa             Int?                 @map("commission_cfa")
+  deadline                  DateTime?            @map("deadline")
+  createdById               String               @map("created_by")
+  assignedToId              String?              @map("assigned_to")
+  status                    ProjectStatus        @default(pending)
+  receivedAt                DateTime?            @map("received_at")
+  deadlineValidatedAt       DateTime?            @map("deadline_validated_at")
+  reportRequired            Boolean              @default(false) @map("report_required")
+  completionReport          String?              @map("completion_report")
+  completedAt               DateTime?            @map("completed_at")
+  progressPercent           Int                  @default(0) @map("progress_percent")
+  deadlineChangeStatus      DeadlineChangeStatus @default(none) @map("deadline_change_status")
+  deadlineChangeRequestedDate DateTime?          @map("deadline_change_requested_date")
+  deadlineChangeReason      String?              @map("deadline_change_reason")
+  deadlineChangeReviewedAt  DateTime?            @map("deadline_change_reviewed_at")
+  deadlineChangeReviewedBy  String?              @map("deadline_change_reviewed_by")
+  updatedAt                 DateTime             @default(now()) @updatedAt @map("updated_at")
+  createdAt                 DateTime             @default(now()) @map("created_at")
+  createdBy                 User                 @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  assignedTo                User?                @relation("ProjectAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  tasks                     Task[]
 
   @@index([createdById])
   @@index([assignedToId])
@@ -76,22 +96,32 @@ model Project {
 }
 
 model Task {
-  id                  String       @id @default(cuid())
-  title               String
-  description         String
-  projectId           String?      @map("project_id")
-  createdById         String       @map("created_by")
-  assignedToId        String?      @map("assigned_to")
-  priority            TaskPriority @default(medium)
-  status              TaskStatus   @default(todo)
-  deadline            DateTime?
-  receivedAt          DateTime?    @map("received_at")
-  deadlineValidatedAt DateTime?    @map("deadline_validated_at")
-  progressPercent     Int          @default(0) @map("progress_percent")
-  createdAt           DateTime     @default(now()) @map("created_at")
-  project             Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  createdBy           User         @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  assignedTo          User?        @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  id                        String               @id @default(cuid())
+  title                     String
+  description               String
+  commissionCfa             Int?                 @map("commission_cfa")
+  projectId                 String?              @map("project_id")
+  createdById               String               @map("created_by")
+  assignedToId              String?              @map("assigned_to")
+  priority                  TaskPriority         @default(medium)
+  status                    TaskStatus           @default(todo)
+  deadline                  DateTime?
+  receivedAt                DateTime?            @map("received_at")
+  deadlineValidatedAt       DateTime?            @map("deadline_validated_at")
+  progressPercent           Int                  @default(0) @map("progress_percent")
+  reportRequired            Boolean              @default(false) @map("report_required")
+  completionReport          String?              @map("completion_report")
+  completedAt               DateTime?            @map("completed_at")
+  deadlineChangeStatus      DeadlineChangeStatus @default(none) @map("deadline_change_status")
+  deadlineChangeRequestedDate DateTime?          @map("deadline_change_requested_date")
+  deadlineChangeReason      String?              @map("deadline_change_reason")
+  deadlineChangeReviewedAt  DateTime?            @map("deadline_change_reviewed_at")
+  deadlineChangeReviewedBy  String?              @map("deadline_change_reviewed_by")
+  updatedAt                 DateTime             @default(now()) @updatedAt @map("updated_at")
+  createdAt                 DateTime             @default(now()) @map("created_at")
+  project                   Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdBy                 User                 @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  assignedTo                User?                @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
   @@index([createdById])

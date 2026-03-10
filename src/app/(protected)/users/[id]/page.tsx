@@ -117,8 +117,8 @@ export default async function UserDetailsPage({ params }: UserDetailsPageProps) 
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-violet-100 bg-[linear-gradient(145deg,#ffffff,#f5f3ff_78%)] p-6 shadow-sm">
-        <div className="pointer-events-none absolute -right-14 -top-16 h-44 w-44 rounded-full bg-violet-100 blur-3xl" />
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-[linear-gradient(160deg,#ffffff,#f8fafc)] p-6 shadow-sm">
+        <div className="pointer-events-none absolute -right-14 -top-16 h-44 w-44 rounded-full bg-slate-100 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-3">
             <Link href="/users" className="app-btn-soft">

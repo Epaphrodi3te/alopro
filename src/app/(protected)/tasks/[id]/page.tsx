@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FiArrowLeft, FiCalendar, FiClock, FiFlag, FiFolder, FiUser } from "react-icons/fi";
+import { FiArrowLeft, FiBriefcase, FiCalendar, FiClock, FiFileText, FiFolder, FiTarget, FiUser } from "react-icons/fi";
 
 import TaskAssignmentWorkflowCard from "@/components/tasks/TaskAssignmentWorkflowCard";
 import Badge from "@/components/ui/Badge";
@@ -18,6 +18,14 @@ function formatDate(value: Date | null) {
   }
 
   return value.toLocaleDateString();
+}
+
+function formatCommission(value: number | null) {
+  if (value === null || value === undefined) {
+    return "Aucune";
+  }
+
+  return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
 }
 
 function taskStatusBadge(status: "todo" | "in_progress" | "done") {
@@ -98,12 +106,15 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
 
   const deadlineLabel = formatDate(task.deadline);
   const isAssignee = task.assignedToId === current.id;
+  const canReviewDeadlineChange = current.role === "admin" || task.createdById === current.id;
+  const deadlineChangeRequestedDateLabel = task.deadlineChangeRequestedDate ? formatDate(task.deadlineChangeRequestedDate) : "";
+  const completedAtLabel = task.completedAt ? formatDate(task.completedAt) : "";
+  const normalizedProgress = Math.max(0, Math.min(100, task.progressPercent));
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-[linear-gradient(145deg,#ffffff,#eaf2ff_78%)] p-6 shadow-sm">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-indigo-200/70 blur-3xl" />
-        <div className="pointer-events-none absolute -left-10 bottom-[-5rem] h-44 w-44 rounded-full bg-sky-100/70 blur-3xl" />
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-[linear-gradient(145deg,#ffffff,#edf7ff)] p-6 shadow-sm">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-cyan-100/60 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-3">
             <Link href="/tasks" className="app-btn-soft">
@@ -113,53 +124,119 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Detail tache</p>
               <h1 className="mt-2 page-title text-slate-900">{task.title}</h1>
-              <p className="page-subtitle">Consultez les informations completes, le contexte et le suivi de cette tache.</p>
+              <p className="page-subtitle">Suivi d&apos;execution, validation d&apos;assignation et compte rendu final.</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {taskStatusBadge(task.status)}
             <Badge label={task.priority} variant={task.priority} />
-            <Badge label={`${task.progressPercent}%`} variant="medium" />
-            <Badge label={task.receivedAt ? "recue" : "en attente"} variant={task.receivedAt ? "done" : "pending"} />
-            <Badge
-              label={task.deadlineValidatedAt ? "date validee" : "date non validee"}
-              variant={task.deadlineValidatedAt ? "progress" : "pending"}
-            />
+            <Badge label={`${normalizedProgress}%`} variant="medium" />
           </div>
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.9fr_1fr]">
-        <article className="rounded-2xl border border-sky-100 bg-[linear-gradient(160deg,#ffffff,#f0f9ff)] p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Description</h2>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <article className="app-card p-4">
+          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+            <FiTarget />
+            Progression
+          </p>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{normalizedProgress}%</p>
+          <div className="mt-3 h-2 rounded-full bg-slate-200">
+            <div className="h-full rounded-full bg-slate-900" style={{ width: `${normalizedProgress}%` }} />
+          </div>
+        </article>
+
+        <article className="app-card p-4">
+          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+            <FiCalendar />
+            Date limite
+          </p>
+          <p className="mt-2 text-base font-semibold text-slate-900">{formatDate(task.deadline)}</p>
+        </article>
+
+        <article className="app-card p-4">
+          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+            <FiUser />
+            Assignee
+          </p>
+          <p className="mt-2 text-base font-semibold text-slate-900">
+            {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "Aucune assignation"}
+          </p>
+        </article>
+
+        <article className="app-card p-4">
+          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+            <FiBriefcase />
+            Commission
+          </p>
+          <p className="mt-2 text-base font-semibold text-slate-900">{formatCommission(task.commissionCfa)}</p>
+        </article>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[1.8fr_1fr]">
+        <article className="app-card p-5">
+          <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
+            <FiFileText />
+            Description
+          </h2>
           <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{task.description}</p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+                <FiUser />
+                Cree par
+              </p>
+              <p className="mt-1 font-semibold text-slate-900">
+                {task.createdBy.firstName} {task.createdBy.lastName}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
+                <FiClock />
+                Terminee le
+              </p>
+              <p className="mt-1 font-semibold text-slate-900">{formatDate(task.completedAt)}</p>
+            </div>
+          </div>
         </article>
 
         <aside className="space-y-3">
-          <div className="rounded-2xl border border-amber-100 bg-[linear-gradient(160deg,#ffffff,#fffbeb)] p-4 shadow-sm">
-            <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-slate-500">
-              <FiCalendar />
-              Deadline
-            </p>
-            <p className="mt-2 text-xl font-bold text-slate-900">{formatDate(task.deadline)}</p>
+          <div className="app-card p-4">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Validation assignment</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Badge label={task.receivedAt ? "tache recue" : "reception en attente"} variant={task.receivedAt ? "done" : "pending"} />
+              <Badge
+                label={task.deadlineValidatedAt ? "date de fin validee" : "date non validee"}
+                variant={task.deadlineValidatedAt ? "progress" : "pending"}
+              />
+            </div>
           </div>
-          <div className="rounded-2xl border border-violet-100 bg-[linear-gradient(160deg,#ffffff,#f5f3ff)] p-4 shadow-sm">
-            <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-slate-500">
-              <FiUser />
-              Cree par
-            </p>
-            <p className="mt-2 font-semibold text-slate-900">
-              {task.createdBy.firstName} {task.createdBy.lastName}
-            </p>
+
+          <div className="app-card p-4">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Compte rendu</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Badge label={task.reportRequired ? "requis" : "non requis"} variant={task.reportRequired ? "high" : "medium"} />
+              <Badge
+                label={`demande date: ${task.deadlineChangeStatus}`}
+                variant={
+                  task.deadlineChangeStatus === "approved"
+                    ? "done"
+                    : task.deadlineChangeStatus === "rejected"
+                      ? "high"
+                      : "pending"
+                }
+              />
+            </div>
           </div>
-          <div className="rounded-2xl border border-teal-100 bg-[linear-gradient(160deg,#ffffff,#f0fdfa)] p-4 shadow-sm">
-            <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-slate-500">
-              <FiClock />
-              Assignee a
-            </p>
-            <p className="mt-2 font-semibold text-slate-900">
-              {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "Aucune assignation"}
-            </p>
+
+          <div className="app-card p-4">
+            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Etat progression</p>
+            <div className="mt-2 h-2 rounded-full bg-slate-200">
+              <div className="h-full rounded-full bg-slate-900" style={{ width: `${normalizedProgress}%` }} />
+            </div>
+            <p className="mt-2 text-sm font-medium text-slate-700">{normalizedProgress}% realise</p>
           </div>
         </aside>
       </section>
@@ -168,37 +245,18 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
         taskId={task.id}
         assignedToId={task.assignedToId}
         isAssignee={isAssignee}
+        canReviewDeadlineChange={canReviewDeadlineChange}
+        reportRequired={task.reportRequired}
+        initialCompletionReport={task.completionReport}
+        initialCompletedAtLabel={completedAtLabel}
+        initialDeadlineChangeStatus={task.deadlineChangeStatus}
+        initialDeadlineChangeRequestedDateLabel={deadlineChangeRequestedDateLabel}
+        initialDeadlineChangeReason={task.deadlineChangeReason}
         initialReceived={Boolean(task.receivedAt)}
         initialDeadlineValidated={Boolean(task.deadlineValidatedAt)}
-        initialProgressPercent={task.progressPercent}
+        initialProgressPercent={normalizedProgress}
         deadlineLabel={deadlineLabel}
       />
-
-      <section className="grid gap-5 lg:grid-cols-3">
-        <article className="rounded-2xl border border-rose-100 bg-[linear-gradient(160deg,#ffffff,#fff1f2)] p-4 shadow-sm">
-          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-            <FiFlag />
-            Priorite
-          </p>
-          <div className="mt-2">
-            <Badge label={task.priority} variant={task.priority} />
-          </div>
-        </article>
-        <article className="rounded-2xl border border-indigo-100 bg-[linear-gradient(160deg,#ffffff,#eef2ff)] p-4 shadow-sm">
-          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-            <FiClock />
-            Statut
-          </p>
-          <div className="mt-2">{taskStatusBadge(task.status)}</div>
-        </article>
-        <article className="rounded-2xl border border-cyan-100 bg-[linear-gradient(160deg,#ffffff,#ecfeff)] p-4 shadow-sm">
-          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-            <FiCalendar />
-            Creee le
-          </p>
-          <p className="mt-2 font-semibold text-slate-900">{formatDate(task.createdAt)}</p>
-        </article>
-      </section>
 
       <section className="app-card p-5">
         <div className="flex items-center justify-between gap-3">
@@ -206,7 +264,7 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
           <FiFolder className="text-slate-500" />
         </div>
         {task.project ? (
-          <div className="mt-4 rounded-xl border border-sky-100 bg-[linear-gradient(160deg,#ffffff,#f0f9ff)] p-4">
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
             <p className="font-semibold text-slate-900">{task.project.title}</p>
             <div className="mt-2">
               <Badge

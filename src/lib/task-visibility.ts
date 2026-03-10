@@ -47,7 +47,7 @@ export function getTaskVisibilityWhereForUser(user: ScopedUser): Prisma.TaskWher
 
   if (user.role === "agent") {
     return {
-      assignedToId: user.id,
+      OR: [{ createdById: user.id }, { assignedToId: user.id }, { project: { createdById: user.id } }],
     };
   }
 
@@ -71,5 +71,5 @@ export function canUserViewTask(user: ScopedUser, task: TaskAccessContext) {
     return task.createdById === user.id || task.assignedToId === user.id || managesProject;
   }
 
-  return task.assignedToId === user.id;
+  return task.createdById === user.id || task.assignedToId === user.id || task.project?.createdById === user.id;
 }

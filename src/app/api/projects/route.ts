@@ -15,7 +15,26 @@ const createProjectSchema = z.object({
   deadline: z.string().optional().or(z.literal("")),
   status: z.enum(PROJECT_STATUS_OPTIONS).optional(),
   assignedToId: z.string().cuid().optional().or(z.literal("")),
+  reportRequired: z.boolean().optional(),
+  commissionCfa: z.union([z.number().int().min(0), z.string().trim().regex(/^\d+$/), z.literal(""), z.null()]).optional(),
 });
+
+function parseCommissionCfa(value: unknown) {
+  if (value === undefined) {
+    return null;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
 
 function canAssignProjectToRole(actorRole: Role, assigneeRole: Role) {
   if (actorRole === "admin") {
@@ -93,6 +112,7 @@ export async function POST(request: NextRequest) {
     }
 
     let assignedToId: string | null = null;
+    const reportRequired = user.role === "admin" ? Boolean(parsed.data.reportRequired) : false;
 
     if (user.role === "agent") {
       // Agents cannot assign projects to others; their own creations are auto-assigned to them.
@@ -120,10 +140,13 @@ export async function POST(request: NextRequest) {
       data: {
         title: parsed.data.title,
         description: parsed.data.description,
+        commissionCfa: parseCommissionCfa(parsed.data.commissionCfa),
         deadline: parseDate(parsed.data.deadline),
         status: parsed.data.status ?? "pending",
         createdById: user.id,
         assignedToId,
+        reportRequired,
+        progressPercent: 0,
       },
       include: {
         tasks: {

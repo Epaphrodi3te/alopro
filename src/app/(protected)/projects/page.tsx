@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FiPlus } from "react-icons/fi";
+import { FiFolder, FiPlus } from "react-icons/fi";
 import { Prisma } from "@prisma/client";
 
 import ProjectsPanel from "@/components/projects/ProjectsPanel";
@@ -74,6 +74,10 @@ export default async function ProjectsPage() {
     <div className="space-y-5">
       <section className="flex flex-wrap items-start justify-between gap-3">
         <div>
+          <p className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-sky-700">
+            <FiFolder className="text-[12px]" />
+            Gestion projets
+          </p>
           <h1 className="page-title text-slate-900">Projets</h1>
           <p className="page-subtitle">
             Vue epuree: seul le nom du projet est affiche ici. Utilisez Voir details pour consulter le reste.
