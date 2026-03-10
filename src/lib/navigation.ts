@@ -47,7 +47,6 @@ export function getMenuByRole(role: Role): NavItem[] {
     { key: "dashboard", href: "/dashboard", label: "Dashboard" },
     { key: "projects", href: "/projects", label: "Projets assignes" },
     { key: "tasks", href: "/tasks", label: "Taches assignees" },
-    { key: "messages", href: "/messages", label: "Messages" },
     { key: "settings", href: "/settings", label: "Parametres" },
   ];
 }

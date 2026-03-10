@@ -1,5 +1,6 @@
 import Badge from "@/components/ui/Badge";
 import { requireUser } from "@/lib/auth";
+import { getDepartmentLabel } from "@/lib/constants";
 
 export default async function SettingsPage() {
   const user = await requireUser();
@@ -18,6 +19,7 @@ export default async function SettingsPage() {
           <p><span className="font-semibold">Nom:</span> {user.firstName} {user.lastName}</p>
           <p><span className="font-semibold">Email:</span> {user.email}</p>
           <p><span className="font-semibold">Telephone:</span> {user.phone ?? "-"}</p>
+          <p><span className="font-semibold">Departement:</span> {getDepartmentLabel(user.department)}</p>
           <p>
             <span className="font-semibold">Role:</span>{" "}
             <Badge

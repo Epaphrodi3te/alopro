@@ -1,6 +1,6 @@
 import { Project, Role, Task } from "@prisma/client";
 
-import { AuthUser } from "@/lib/auth";
+import type { AuthUser } from "@/lib/auth";
 
 export function isAdmin(user: Pick<AuthUser, "role"> | null) {
   return user?.role === "admin";
@@ -68,4 +68,8 @@ export function canEditTask(
 
 export function canDeleteTask(role: Role) {
   return role === "admin";
+}
+
+export function canSendDirectEmail(role: Role) {
+  return role === "admin" || role === "manager";
 }

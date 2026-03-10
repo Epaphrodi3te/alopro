@@ -18,15 +18,11 @@ export default async function LoginPage() {
         <span className="form-kicker">AloPro access</span>
         <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900">Connexion</h1>
         <p className="mt-2 text-sm leading-relaxed text-slate-600">
-          Espace interne pour piloter les projets, taches et communications d'equipe.
+          Espace interne pour piloter les projets, taches et communications des equipes.
         </p>
 
         <div className="mt-6">
           <LoginForm />
-        </div>
-
-        <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-          Compte admin seed: admin@alopro.com / Admin@1234
         </div>
       </section>
     </main>

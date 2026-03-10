@@ -22,6 +22,7 @@ export default async function UsersPage() {
       email: true,
       phone: true,
       role: true,
+      department: true,
       createdAt: true,
     },
   });

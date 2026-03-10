@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { hashPassword, requireApiUser } from "@/lib/auth";
 import { apiError } from "@/lib/api";
-import { ROLE_OPTIONS } from "@/lib/constants";
+import { DEPARTMENT_OPTIONS, ROLE_OPTIONS } from "@/lib/constants";
 import { canManageUsers } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
 
@@ -14,6 +14,7 @@ const updateUserSchema = z.object({
   phone: z.string().trim().min(6).optional().or(z.literal("")),
   password: z.string().min(8).optional(),
   role: z.enum(ROLE_OPTIONS).optional(),
+  department: z.enum(DEPARTMENT_OPTIONS).optional(),
 });
 
 type Params = {
@@ -51,6 +52,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       email?: string;
       phone?: string | null;
       role?: (typeof ROLE_OPTIONS)[number];
+      department?: (typeof DEPARTMENT_OPTIONS)[number];
       password?: string;
     } = {};
 
@@ -81,6 +83,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
       data.role = parsed.data.role;
     }
 
+    if (parsed.data.department) {
+      data.department = parsed.data.department;
+    }
+
     if (parsed.data.password) {
       data.password = await hashPassword(parsed.data.password);
     }
@@ -95,6 +101,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         email: true,
         phone: true,
         role: true,
+        department: true,
         createdAt: true,
       },
     });

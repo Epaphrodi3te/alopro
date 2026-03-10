@@ -13,6 +13,12 @@ enum Role {
   agent
 }
 
+enum Department {
+  software_development
+  research_innovation
+  training
+}
+
 enum ProjectStatus {
   pending
   in_progress
@@ -39,6 +45,7 @@ model User {
   phone            String?
   password         String
   role             Role
+  department       Department @default(software_development)
   createdAt        DateTime  @default(now()) @map("created_at")
   createdProjects  Project[] @relation("ProjectCreator")
   assignedProjects Project[] @relation("ProjectAssignee")

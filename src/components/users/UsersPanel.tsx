@@ -8,6 +8,7 @@ import Swal from "sweetalert2";
 import DataTable from "@/components/tables/DataTable";
 import Badge from "@/components/ui/Badge";
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
+import { DEPARTMENT_OPTIONS, getDepartmentLabel } from "@/lib/constants";
 import { escapeHtml } from "@/lib/html";
 import { BasicUser } from "@/lib/types";
 
@@ -25,6 +26,7 @@ const initialForm = {
   phone: "",
   password: "",
   role: "agent",
+  department: "software_development",
 };
 
 export default function UsersPanel({
@@ -88,7 +90,7 @@ export default function UsersPanel({
             <span class="swal-user-avatar">${escapeHtml(`${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase())}</span>
             <div class="swal-user-meta">
               <p class="swal-user-name">${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</p>
-              <p class="swal-user-role">${escapeHtml(user.role)}</p>
+              <p class="swal-user-role">${escapeHtml(user.role)} · ${escapeHtml(getDepartmentLabel(user.department))}</p>
             </div>
           </div>
         </div>
@@ -122,6 +124,12 @@ export default function UsersPanel({
                 <option value="agent" ${user.role === "agent" ? "selected" : ""}>agent</option>
               </select>
             </div>
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-department">Departement</label>
+              <select id="swal-department" class="swal2-select">
+                ${DEPARTMENT_OPTIONS.map((department) => `<option value="${department}" ${user.department === department ? "selected" : ""}>${escapeHtml(getDepartmentLabel(department))}</option>`).join("")}
+              </select>
+            </div>
           </div>
         </div>
       `,
@@ -143,9 +151,10 @@ export default function UsersPanel({
         const email = (document.getElementById("swal-email") as HTMLInputElement)?.value?.trim();
         const phone = (document.getElementById("swal-phone") as HTMLInputElement)?.value?.trim();
         const role = (document.getElementById("swal-role") as HTMLSelectElement)?.value;
+        const department = (document.getElementById("swal-department") as HTMLSelectElement)?.value;
 
-        if (!firstName || !lastName || !email || !role) {
-          Swal.showValidationMessage("Prenom, nom, email et role sont obligatoires.");
+        if (!firstName || !lastName || !email || !role || !department) {
+          Swal.showValidationMessage("Prenom, nom, email, role et departement sont obligatoires.");
           return;
         }
 
@@ -155,12 +164,14 @@ export default function UsersPanel({
           email: string;
           phone: string;
           role: string;
+          department: string;
         } = {
           firstName,
           lastName,
           email,
           phone: phone ?? "",
           role,
+          department,
         };
 
         return payload;
@@ -199,6 +210,7 @@ export default function UsersPanel({
         <div style="text-align:left;padding:0 6px;">
           <p><strong>Nom:</strong> ${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</p>
           <p><strong>Role:</strong> ${escapeHtml(user.role)}</p>
+          <p><strong>Departement:</strong> ${escapeHtml(getDepartmentLabel(user.department))}</p>
           <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
           <p><strong>Telephone:</strong> ${escapeHtml(user.phone ?? "-")}</p>
           <p><strong>Date de creation:</strong> ${new Date(user.createdAt).toLocaleDateString()}</p>
@@ -250,8 +262,8 @@ export default function UsersPanel({
               ADMIN
             </span>
             <h2 className="form-shell-title">Creation de compte utilisateur</h2>
-            <p className="form-shell-subtitle">
-              Ajoutez un nouveau collaborateur avec ses informations de base, son role et un mot de passe provisoire.
+          <p className="form-shell-subtitle">
+              Ajoutez un nouveau collaborateur avec ses informations de base, son role, son departement et un mot de passe provisoire.
             </p>
             <div className="form-meta">
               <span className="form-pill">admin: gestion complete</span>
@@ -342,10 +354,26 @@ export default function UsersPanel({
               </select>
               <p className="field-help">Definit les permissions sur la plateforme.</p>
             </div>
+            <div className="form-field">
+              <label htmlFor="user-department" className="field-label">Departement</label>
+              <select
+                id="user-department"
+                value={form.department}
+                onChange={(event) => setForm((prev) => ({ ...prev, department: event.target.value }))}
+                className="app-select"
+              >
+                {DEPARTMENT_OPTIONS.map((department) => (
+                  <option key={department} value={department}>
+                    {getDepartmentLabel(department)}
+                  </option>
+                ))}
+              </select>
+              <p className="field-help">Associe l&apos;utilisateur a son pole de travail.</p>
+            </div>
 
             <div className="form-note md:col-span-2">
               Le compte sera cree immediatement. Transmettez ensuite le mot de passe de facon securisee a
-              l'utilisateur.
+              l&apos;utilisateur.
             </div>
 
             <button
@@ -363,13 +391,14 @@ export default function UsersPanel({
       {showList && (
         <section>
           <DataTable
-            columns={["Nom", "Role", "Actions"]}
+            columns={["Nom", "Departement", "Role", "Actions"]}
             emptyLabel="Aucun utilisateur trouve."
             hasRows={sortedUsers.length > 0}
           >
             {sortedUsers.map((user) => (
               <tr key={user.id} className="border-t border-slate-200">
                 <td data-label="Nom" className="px-4 py-3 font-semibold text-slate-900">{user.firstName} {user.lastName}</td>
+                <td data-label="Departement" className="px-4 py-3 text-sm text-slate-600">{getDepartmentLabel(user.department)}</td>
                 <td data-label="Role" className="px-4 py-3">
                   <Badge
                     label={user.role}

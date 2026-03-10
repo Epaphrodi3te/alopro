@@ -1,4 +1,4 @@
-import { ProjectStatus, Role, TaskPriority, TaskStatus } from "@prisma/client";
+import { Department, ProjectStatus, Role, TaskPriority, TaskStatus } from "@prisma/client";
 
 export type BasicUser = {
   id: string;
@@ -7,6 +7,7 @@ export type BasicUser = {
   email: string;
   phone: string | null;
   role: Role;
+  department: Department;
   createdAt: Date;
 };
 
@@ -15,6 +16,7 @@ export type UserLight = {
   firstName: string;
   lastName: string;
   role: Role;
+  department?: Department;
 };
 
 export type ProjectItem = {

@@ -22,6 +22,7 @@ export type SessionTokenPayload = {
   email: string;
   firstName: string;
   lastName: string;
+  department: User["department"];
   iat?: number;
   exp?: number;
 };
@@ -33,6 +34,7 @@ export const authUserSelect = {
   email: true,
   phone: true,
   role: true,
+  department: true,
   createdAt: true,
 } satisfies Prisma.UserSelect;
 
@@ -56,13 +58,14 @@ export async function verifyPassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
 
-export function signAuthToken(user: Pick<User, "id" | "role" | "email" | "firstName" | "lastName">) {
+export function signAuthToken(user: Pick<User, "id" | "role" | "email" | "firstName" | "lastName" | "department">) {
   const payload: SessionTokenPayload = {
     sub: user.id,
     role: user.role,
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
+    department: user.department,
   };
 
   return jwt.sign(payload, JWT_SECRET, {

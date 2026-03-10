@@ -1,17 +1,27 @@
 import Link from "next/link";
 import { FiPlus } from "react-icons/fi";
+import { Role } from "@prisma/client";
+import { redirect } from "next/navigation";
 
 import MessagesPanel from "@/components/messages/MessagesPanel";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+function canSendDirectEmail(role: Role) {
+  return role === "admin" || role === "manager";
+}
+
 export default async function MessagesPage() {
   const user = await requireUser();
+
+  if (!canSendDirectEmail(user.role)) {
+    redirect("/dashboard");
+  }
 
   const [messages, users] = await Promise.all([
     prisma.message.findMany({
       where: {
-        OR: [{ senderId: user.id }, { receiverId: user.id }],
+        senderId: user.id,
       },
       orderBy: { createdAt: "desc" },
       include: {
@@ -53,7 +63,7 @@ export default async function MessagesPage() {
         <div>
           <h1 className="page-title text-slate-900">Messages</h1>
           <p className="page-subtitle">
-            Historique des conversations. Cliquez sur Nouveau pour rediger un message.
+            Historique des emails envoyes. Cliquez sur Nouveau pour rediger un email direct.
           </p>
         </div>
         <Link href="/messages/new" className="app-btn-primary">
@@ -62,7 +72,7 @@ export default async function MessagesPage() {
         </Link>
       </section>
 
-      <MessagesPanel messages={messages} users={users} currentUserId={user.id} view="list" />
+      <MessagesPanel messages={messages} users={users} view="list" />
     </div>
   );
 }

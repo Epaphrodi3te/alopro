@@ -108,10 +108,10 @@ export default function TasksPanel({
         return;
       }
 
-      setForm((prev) => ({
+      setForm({
         ...initialForm,
         projectId: projects[0]?.id ?? "",
-      }));
+      });
       await showSuccess("Tache creee");
 
       if (redirectAfterCreate) {

@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { PrismaClient, Role } from "@prisma/client";
+import { Department, PrismaClient, Role } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -14,6 +14,7 @@ async function main() {
       lastName: "Admin",
       phone: "+0000000000",
       role: Role.admin,
+      department: Department.software_development,
       password: hashed,
     },
     create: {
@@ -22,6 +23,7 @@ async function main() {
       email: adminEmail,
       phone: "+0000000000",
       role: Role.admin,
+      department: Department.software_development,
       password: hashed,
     },
   });
