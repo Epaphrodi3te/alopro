@@ -2,19 +2,20 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiAlertTriangle, FiCalendar, FiCheckCircle, FiClock, FiTrendingUp } from "react-icons/fi";
+import { FiAlertTriangle, FiCalendar, FiCheckCircle, FiClock, FiTarget, FiTrendingUp } from "react-icons/fi";
 
 import Badge from "@/components/ui/Badge";
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
 
 type DeadlineChangeStatus = "none" | "pending" | "approved" | "rejected";
 
-type TaskAssignmentWorkflowCardProps = {
-  taskId: string;
+type ProjectAssignmentWorkflowCardProps = {
+  projectId: string;
   assignedToId: string | null;
   isAssignee: boolean;
   canReviewDeadlineChange: boolean;
   reportRequired: boolean;
+  initialProgressPercent: number;
   initialCompletionReport: string | null;
   initialCompletedAtLabel: string;
   initialDeadlineChangeStatus: DeadlineChangeStatus;
@@ -22,8 +23,9 @@ type TaskAssignmentWorkflowCardProps = {
   initialDeadlineChangeReason: string | null;
   initialReceived: boolean;
   initialDeadlineValidated: boolean;
-  initialProgressPercent: number;
   deadlineLabel: string;
+  progressDerivedFromTasks: boolean;
+  linkedTasksCount: number;
 };
 
 function receiptBadge(received: boolean) {
@@ -58,12 +60,13 @@ function deadlineChangeBadge(status: DeadlineChangeStatus) {
   return <Badge label="aucune demande de date" variant="medium" />;
 }
 
-export default function TaskAssignmentWorkflowCard({
-  taskId,
+export default function ProjectAssignmentWorkflowCard({
+  projectId,
   assignedToId,
   isAssignee,
   canReviewDeadlineChange,
   reportRequired,
+  initialProgressPercent,
   initialCompletionReport,
   initialCompletedAtLabel,
   initialDeadlineChangeStatus,
@@ -71,9 +74,10 @@ export default function TaskAssignmentWorkflowCard({
   initialDeadlineChangeReason,
   initialReceived,
   initialDeadlineValidated,
-  initialProgressPercent,
   deadlineLabel,
-}: TaskAssignmentWorkflowCardProps) {
+  progressDerivedFromTasks,
+  linkedTasksCount,
+}: ProjectAssignmentWorkflowCardProps) {
   const router = useRouter();
   const [received, setReceived] = useState(initialReceived);
   const [deadlineValidated, setDeadlineValidated] = useState(initialDeadlineValidated);
@@ -97,14 +101,16 @@ export default function TaskAssignmentWorkflowCard({
 
     if (!next) {
       setDeadlineValidated(false);
-      setProgressPercent(0);
+      if (!progressDerivedFromTasks) {
+        setProgressPercent(0);
+      }
     }
   };
 
   const handleDeadlineValidatedChange = (next: boolean) => {
     setDeadlineValidated(next);
 
-    if (!next) {
+    if (!next && !progressDerivedFromTasks) {
       setProgressPercent(0);
     }
   };
@@ -113,23 +119,30 @@ export default function TaskAssignmentWorkflowCard({
     event.preventDefault();
 
     if (!assignedToId) {
-      await showError("Impossible", "Cette tache n'est pas assignee.");
+      await showError("Impossible", "Ce projet n&apos;est pas assigne.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(`/api/projects/${projectId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          received,
-          deadlineValidated: received ? deadlineValidated : false,
-          progressPercent: received && deadlineValidated ? normalizedProgress : 0,
-        }),
+        body: JSON.stringify(
+          progressDerivedFromTasks
+            ? {
+                received,
+                deadlineValidated: received ? deadlineValidated : false,
+              }
+            : {
+                received,
+                deadlineValidated: received ? deadlineValidated : false,
+                progressPercent: received && deadlineValidated ? normalizedProgress : 0,
+              },
+        ),
       });
 
       if (!response.ok) {
@@ -137,10 +150,10 @@ export default function TaskAssignmentWorkflowCard({
         return;
       }
 
-      await showSuccess("Suivi de tache mis a jour");
+      await showSuccess("Suivi de projet mis a jour");
       router.refresh();
     } catch {
-      await showError("Erreur reseau", "Impossible de mettre a jour le suivi.");
+      await showError("Erreur reseau", "Impossible de mettre a jour le suivi du projet.");
     } finally {
       setLoading(false);
     }
@@ -150,7 +163,7 @@ export default function TaskAssignmentWorkflowCard({
     event.preventDefault();
 
     if (!assignedToId) {
-      await showError("Impossible", "Cette tache n'est pas assignee.");
+      await showError("Impossible", "Ce projet n&apos;est pas assigne.");
       return;
     }
 
@@ -167,16 +180,23 @@ export default function TaskAssignmentWorkflowCard({
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const payload = progressDerivedFromTasks
+        ? {
+            markCompleted: true,
+            completionReport: completionReport.trim(),
+          }
+        : {
+            progressPercent: 100,
+            markCompleted: true,
+            completionReport: completionReport.trim(),
+          };
+
+      const response = await fetch(`/api/projects/${projectId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          progressPercent: 100,
-          markCompleted: true,
-          completionReport: completionReport.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -186,10 +206,10 @@ export default function TaskAssignmentWorkflowCard({
 
       setProgressPercent(100);
       setCompletedAtLabel(new Date().toLocaleDateString());
-      await showSuccess("Tache marquee comme terminee");
+      await showSuccess("Projet marque comme termine");
       router.refresh();
     } catch {
-      await showError("Erreur reseau", "Impossible de finaliser la tache.");
+      await showError("Erreur reseau", "Impossible de finaliser le projet.");
     } finally {
       setLoading(false);
     }
@@ -199,7 +219,7 @@ export default function TaskAssignmentWorkflowCard({
     event.preventDefault();
 
     if (!assignedToId) {
-      await showError("Impossible", "Cette tache n'est pas assignee.");
+      await showError("Impossible", "Ce projet n&apos;est pas assigne.");
       return;
     }
 
@@ -211,7 +231,7 @@ export default function TaskAssignmentWorkflowCard({
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(`/api/projects/${projectId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -245,7 +265,7 @@ export default function TaskAssignmentWorkflowCard({
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(`/api/projects/${projectId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -300,7 +320,7 @@ export default function TaskAssignmentWorkflowCard({
                   />
                   <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
                     <FiCheckCircle className="text-emerald-600" />
-                    J&apos;ai recu la tache
+                    J&apos;ai recu ce projet
                   </span>
                 </label>
 
@@ -323,26 +343,33 @@ export default function TaskAssignmentWorkflowCard({
                     <FiTrendingUp />
                     Niveau de progression
                   </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={normalizedProgress}
-                      disabled={!received || !deadlineValidated}
-                      onChange={(event) => setProgressPercent(Number(event.target.value))}
-                      className="h-2 w-full max-w-xs accent-indigo-600"
-                    />
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={normalizedProgress}
-                      disabled={!received || !deadlineValidated}
-                      onChange={(event) => setProgressPercent(Number(event.target.value))}
-                      className="app-input w-24"
-                    />
-                  </div>
+
+                  {progressDerivedFromTasks ? (
+                    <p className="mt-2 text-sm text-slate-600">
+                      Progression calculee automatiquement depuis {linkedTasksCount} tache{linkedTasksCount > 1 ? "s" : ""} du projet.
+                    </p>
+                  ) : (
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={normalizedProgress}
+                        disabled={!received || !deadlineValidated}
+                        onChange={(event) => setProgressPercent(Number(event.target.value))}
+                        className="h-2 w-full max-w-xs accent-indigo-600"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={normalizedProgress}
+                        disabled={!received || !deadlineValidated}
+                        onChange={(event) => setProgressPercent(Number(event.target.value))}
+                        className="app-input w-24"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <button type="submit" disabled={loading} className="app-btn-primary">
@@ -377,23 +404,26 @@ export default function TaskAssignmentWorkflowCard({
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                   <p className="inline-flex items-center gap-2 font-semibold">
                     <FiAlertTriangle />
-                    Progression a 100%: marquez la tache comme terminee.
+                    Progression a 100%: marquez le projet comme termine.
                   </p>
                 </div>
               )}
 
               {(showCompletionAlert || showCompletionReport || reportRequired) && (
                 <form className="space-y-3 rounded-xl border border-slate-200 bg-white p-3" onSubmit={submitCompletionReport}>
-                  <p className="text-sm font-semibold text-slate-900">Compte rendu de finalisation</p>
+                  <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <FiTarget />
+                    Compte rendu de finalisation
+                  </p>
                   <textarea
                     value={completionReport}
                     onChange={(event) => setCompletionReport(event.target.value)}
-                    placeholder="Decrivez le resultat final de la tache..."
+                    placeholder="Decrivez le resultat final du projet..."
                     className="app-textarea"
                     rows={4}
                   />
                   <button type="submit" disabled={loading || normalizedProgress < 100} className="app-btn-primary">
-                    Marquer comme terminee
+                    Marquer comme termine
                   </button>
                 </form>
               )}
@@ -427,12 +457,12 @@ export default function TaskAssignmentWorkflowCard({
             <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
               <p className="font-semibold text-slate-900">Compte rendu enregistre</p>
               <p className="mt-1 whitespace-pre-line">{completionReport || "-"}</p>
-              {completedAtLabel && <p className="mt-2 text-xs text-slate-500">Terminee le {completedAtLabel}</p>}
+              {completedAtLabel && <p className="mt-2 text-xs text-slate-500">Termine le {completedAtLabel}</p>}
             </div>
           )}
         </>
       ) : (
-        <p className="mt-4 text-sm text-slate-500">Cette tache n&apos;est pas encore assignee.</p>
+        <p className="mt-4 text-sm text-slate-500">Ce projet n&apos;est pas encore assigne.</p>
       )}
     </section>
   );

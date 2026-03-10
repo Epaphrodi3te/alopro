@@ -30,10 +30,12 @@ const initialForm = {
   title: "",
   description: "",
   projectId: "",
+  commissionCfa: "",
   priority: "medium",
   status: "todo",
   deadline: "",
   assignedToId: "",
+  reportRequired: false,
 };
 
 function statusBadge(status: "todo" | "in_progress" | "done") {
@@ -66,6 +68,14 @@ function formatDate(value: Date | null) {
   }
 
   return new Date(value).toLocaleDateString();
+}
+
+function formatCommission(value: number | null) {
+  if (value === null || value === undefined) {
+    return "Aucune";
+  }
+
+  return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
 }
 
 export default function TasksPanel({
@@ -103,6 +113,7 @@ export default function TasksPanel({
   );
 
   const canAssignTask = role === "admin" || role === "manager";
+  const canRequireReport = role === "admin";
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -118,6 +129,7 @@ export default function TasksPanel({
         body: JSON.stringify({
           ...form,
           assignedToId: canAssignTask ? form.assignedToId : "",
+          reportRequired: canRequireReport ? form.reportRequired : false,
         }),
       });
 
@@ -189,6 +201,12 @@ export default function TasksPanel({
                 task.deadline ? new Date(task.deadline).toISOString().slice(0, 10) : ""
               }">
             </div>
+            <div class="swal-pro-field">
+              <label class="swal-pro-label" for="swal-commission">Commission (FCFA)</label>
+              <input id="swal-commission" type="number" min="0" class="swal2-input" value="${task.commissionCfa ?? ""}" placeholder="Ex: 25000">
+            </div>
+          </div>
+          <div class="swal-pro-row">
             ${
               canAssignTask
                 ? `<div class="swal-pro-field">
@@ -217,6 +235,7 @@ export default function TasksPanel({
         const priority = (document.getElementById("swal-priority") as HTMLSelectElement)?.value;
         const status = (document.getElementById("swal-status") as HTMLSelectElement)?.value;
         const deadline = (document.getElementById("swal-deadline") as HTMLInputElement)?.value;
+        const commissionCfa = (document.getElementById("swal-commission") as HTMLInputElement)?.value;
         const assignedToId = canAssignTask
           ? (document.getElementById("swal-assignee") as HTMLSelectElement)?.value
           : undefined;
@@ -232,6 +251,7 @@ export default function TasksPanel({
           priority,
           status,
           deadline,
+          commissionCfa,
           assignedToId,
         };
       },
@@ -385,6 +405,18 @@ export default function TasksPanel({
                 className="app-input"
               />
             </div>
+            <div className="form-field">
+              <label htmlFor="task-commission" className="field-label">Commission (FCFA)</label>
+              <input
+                id="task-commission"
+                type="number"
+                min={0}
+                value={form.commissionCfa}
+                onChange={(event) => setForm((prev) => ({ ...prev, commissionCfa: event.target.value }))}
+                placeholder="Ex: 15000"
+                className="app-input"
+              />
+            </div>
 
             {canAssignTask && (
               <div className="form-field">
@@ -403,6 +435,18 @@ export default function TasksPanel({
                   ))}
                 </select>
               </div>
+            )}
+
+            {canRequireReport && (
+              <label className="form-field md:col-span-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={form.reportRequired}
+                  onChange={(event) => setForm((prev) => ({ ...prev, reportRequired: event.target.checked }))}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                <span className="text-sm font-medium text-slate-700">Compte rendu final obligatoire</span>
+              </label>
             )}
 
             <button
@@ -469,7 +513,7 @@ export default function TasksPanel({
                 </div>
               </div>
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <div className="mt-3 grid gap-2 sm:grid-cols-4">
                 <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
                   <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     <FiUser />
@@ -500,6 +544,11 @@ export default function TasksPanel({
                       style={{ width: `${Math.max(0, Math.min(100, task.progressPercent))}%` }}
                     />
                   </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Commission</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">{formatCommission(task.commissionCfa)}</p>
                 </div>
               </div>
             </article>

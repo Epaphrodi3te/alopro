@@ -1,6 +1,6 @@
 import { Prisma, Role } from "@prisma/client";
 
-import { NavNotificationCounts } from "@/lib/navigation";
+import { getDashboardNotificationCount, NavNotificationCounts } from "@/lib/navigation";
 import { getProjectVisibilityWhereForUser } from "@/lib/project-visibility";
 import { getTaskVisibilityWhereForUser } from "@/lib/task-visibility";
 import prisma from "@/lib/prisma";
@@ -42,13 +42,13 @@ export async function getNotificationCountsForUser(
     prisma.project.count({
       where: {
         ...projectWhere,
-        createdAt: { gt: seenAt.projects ?? EPOCH },
+        updatedAt: { gt: seenAt.projects ?? EPOCH },
       },
     }),
     prisma.task.count({
       where: {
         ...taskWhere,
-        createdAt: { gt: seenAt.tasks ?? EPOCH },
+        updatedAt: { gt: seenAt.tasks ?? EPOCH },
       },
     }),
     prisma.message.count({
@@ -68,7 +68,7 @@ export async function getNotificationCountsForUser(
   ]);
 
   const counts: NavNotificationCounts = {
-    dashboard: tasksCount + messagesCount,
+    dashboard: 0,
     projects: projectsCount,
     tasks: tasksCount,
     messages: messagesCount,
@@ -77,6 +77,8 @@ export async function getNotificationCountsForUser(
   if (user.role === "admin") {
     counts.users = usersCount;
   }
+
+  counts.dashboard = getDashboardNotificationCount(counts);
 
   return counts;
 }

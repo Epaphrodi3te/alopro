@@ -50,3 +50,7 @@ export function getMenuByRole(role: Role): NavItem[] {
     { key: "settings", href: "/settings", label: "Parametres" },
   ];
 }
+
+export function getDashboardNotificationCount(counts: NavNotificationCounts) {
+  return (counts.projects ?? 0) + (counts.tasks ?? 0) + (counts.messages ?? 0) + (counts.users ?? 0);
+}

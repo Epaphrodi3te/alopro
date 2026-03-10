@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FiPlus } from "react-icons/fi";
+import { FiMail, FiPlus } from "react-icons/fi";
 import { Role } from "@prisma/client";
 import { redirect } from "next/navigation";
 
@@ -61,6 +61,10 @@ export default async function MessagesPage() {
     <div className="space-y-5">
       <section className="flex flex-wrap items-start justify-between gap-3">
         <div>
+          <p className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-amber-700">
+            <FiMail className="text-[12px]" />
+            Communication
+          </p>
           <h1 className="page-title text-slate-900">Messages</h1>
           <p className="page-subtitle">
             Historique des emails envoyes. Cliquez sur Nouveau pour rediger un email direct.

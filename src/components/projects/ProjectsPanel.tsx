@@ -20,9 +20,11 @@ type ProjectsPanelProps = {
 const initialForm = {
   title: "",
   description: "",
+  commissionCfa: "",
   deadline: "",
   status: "pending",
   assignedToId: "",
+  reportRequired: false,
 };
 
 function formatDate(value: Date | null) {
@@ -31,6 +33,14 @@ function formatDate(value: Date | null) {
   }
 
   return new Date(value).toLocaleDateString();
+}
+
+function formatCommission(value: number | null) {
+  if (value === null || value === undefined) {
+    return "Aucune";
+  }
+
+  return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
 }
 
 export default function ProjectsPanel({
@@ -63,6 +73,7 @@ export default function ProjectsPanel({
   );
 
   const canAssignProject = role === "admin" || role === "manager";
+  const canRequireReport = role === "admin";
 
   const submitCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -77,6 +88,7 @@ export default function ProjectsPanel({
         body: JSON.stringify({
           ...form,
           assignedToId: canAssignProject ? form.assignedToId : "",
+          reportRequired: canRequireReport ? form.reportRequired : false,
         }),
       });
 
@@ -142,6 +154,18 @@ export default function ProjectsPanel({
                 className="app-input"
               />
             </div>
+            <div className="form-field">
+              <label htmlFor="project-commission" className="field-label">Commission (FCFA)</label>
+              <input
+                id="project-commission"
+                type="number"
+                min={0}
+                value={form.commissionCfa}
+                onChange={(event) => setForm((prev) => ({ ...prev, commissionCfa: event.target.value }))}
+                placeholder="Ex: 25000"
+                className="app-input"
+              />
+            </div>
 
             <div className="form-field md:col-span-2">
               <label htmlFor="project-description" className="field-label">Description</label>
@@ -175,6 +199,18 @@ export default function ProjectsPanel({
               </div>
             )}
 
+            {canRequireReport && (
+              <label className="form-field md:col-span-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={form.reportRequired}
+                  onChange={(event) => setForm((prev) => ({ ...prev, reportRequired: event.target.checked }))}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                <span className="text-sm font-medium text-slate-700">Compte rendu final obligatoire</span>
+              </label>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -196,13 +232,7 @@ export default function ProjectsPanel({
           )}
 
           {sortedProjects.map((project) => {
-            const totalTasks = project.tasks?.length ?? project._count.tasks ?? 0;
-            const doneTasks = project.tasks
-              ? project.tasks.filter((task) => task.status === "done").length
-              : project.status === "completed" && totalTasks > 0
-                ? totalTasks
-                : 0;
-            const progressPercent = totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
+            const progressPercent = Math.max(0, Math.min(100, project.progressPercent ?? 0));
 
             return (
               <article
@@ -226,7 +256,7 @@ export default function ProjectsPanel({
                   </div>
                 </div>
 
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="mt-3 grid gap-2 sm:grid-cols-4">
                   <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
                     <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                       <FiUser />
@@ -257,6 +287,13 @@ export default function ProjectsPanel({
                         style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }}
                       />
                     </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      Commission
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">{formatCommission(project.commissionCfa)}</p>
                   </div>
                 </div>
               </article>

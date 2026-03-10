@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 import Navbar from "@/components/navbar/Navbar";
 import Sidebar from "@/components/sidebar/Sidebar";
-import { NavKey, NavNotificationCounts } from "@/lib/navigation";
+import { getDashboardNotificationCount, NavKey, NavNotificationCounts } from "@/lib/navigation";
 
 type AppShellProps = {
   userId: string;
@@ -32,8 +32,9 @@ export default function AppShell({
   const [seenAtByTab, setSeenAtByTab] = useState<
     Record<"projects" | "tasks" | "messages" | "users", string> | null
   >(null);
+  const EPOCH_ISO = new Date(0).toISOString();
 
-  const tabStorageKey = `alopro:seen-notifications:${userId}`;
+  const tabStorageKey = `alopro:seen-notifications:v2:${userId}`;
 
   const getTabFromPathname = (currentPathname: string): NavKey | null => {
     if (currentPathname.startsWith("/projects")) {
@@ -60,12 +61,11 @@ export default function AppShell({
   }, [initialNotificationCounts]);
 
   useEffect(() => {
-    const now = new Date().toISOString();
     const fallback = {
-      projects: now,
-      tasks: now,
-      messages: now,
-      users: now,
+      projects: EPOCH_ISO,
+      tasks: EPOCH_ISO,
+      messages: EPOCH_ISO,
+      users: EPOCH_ISO,
     };
 
     try {
@@ -78,10 +78,10 @@ export default function AppShell({
 
       const parsed = JSON.parse(raw) as Partial<Record<"projects" | "tasks" | "messages" | "users", string>>;
       const normalized = {
-        projects: parsed.projects ?? now,
-        tasks: parsed.tasks ?? now,
-        messages: parsed.messages ?? now,
-        users: parsed.users ?? now,
+        projects: parsed.projects ?? EPOCH_ISO,
+        tasks: parsed.tasks ?? EPOCH_ISO,
+        messages: parsed.messages ?? EPOCH_ISO,
+        users: parsed.users ?? EPOCH_ISO,
       };
 
       localStorage.setItem(tabStorageKey, JSON.stringify(normalized));
@@ -90,7 +90,7 @@ export default function AppShell({
       localStorage.setItem(tabStorageKey, JSON.stringify(fallback));
       setSeenAtByTab(fallback);
     }
-  }, [tabStorageKey]);
+  }, [EPOCH_ISO, tabStorageKey]);
 
   useEffect(() => {
     const currentTab = getTabFromPathname(pathname);
@@ -120,7 +120,7 @@ export default function AppShell({
         [currentTab]: 0,
       };
 
-      next.dashboard = (next.tasks ?? 0) + (next.messages ?? 0);
+      next.dashboard = getDashboardNotificationCount(next);
       return next;
     });
   }, [pathname, tabStorageKey]);
@@ -159,7 +159,7 @@ export default function AppShell({
             next[currentTab] = 0;
           }
 
-          next.dashboard = (next.tasks ?? 0) + (next.messages ?? 0);
+          next.dashboard = getDashboardNotificationCount(next);
           setNotificationCounts(next);
         }
       } catch {
@@ -168,11 +168,18 @@ export default function AppShell({
     };
 
     pullNotifications();
-    const intervalId = window.setInterval(pullNotifications, 25000);
+    const intervalId = window.setInterval(pullNotifications, 5000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        pullNotifications();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       active = false;
       window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [pathname, seenAtByTab]);
 

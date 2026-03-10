@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FiPlus } from "react-icons/fi";
+import { FiPlus, FiUsers } from "react-icons/fi";
 import { redirect } from "next/navigation";
 
 import UsersPanel from "@/components/users/UsersPanel";
@@ -31,6 +31,10 @@ export default async function UsersPage() {
     <div className="space-y-5">
       <section className="flex flex-wrap items-start justify-between gap-3">
         <div>
+          <p className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-violet-700">
+            <FiUsers className="text-[12px]" />
+            Gestion utilisateurs
+          </p>
           <h1 className="page-title text-slate-900">Gestion des utilisateurs</h1>
           <p className="page-subtitle">
             Liste complete des comptes. Utilisez le bouton Nouveau pour ouvrir le formulaire de creation.
