@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FiArrowLeft } from "react-icons/fi";
+import { FiArrowLeft, FiMail } from "react-icons/fi";
 import { redirect } from "next/navigation";
 
 import MessagesPanel from "@/components/messages/MessagesPanel";
@@ -30,19 +30,25 @@ export default async function NewMessagePage() {
 
   return (
     <div className="space-y-5">
-      <section className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="page-title text-slate-900">Nouveau message</h1>
-          <p className="page-subtitle">
-            {user.role === "agent"
-              ? "Selectionnez un ou plusieurs administrateurs ou managers puis redigez votre message."
-              : "Selectionnez un ou plusieurs destinataires puis redigez un email professionnel."}
-          </p>
+      <section className="app-card overflow-hidden px-5 py-5 md:px-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-3xl">
+            <p className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-sky-700">
+              <FiMail className="text-[12px]" />
+              Nouveau message
+            </p>
+            <h1 className="page-title mt-3 text-slate-900">Envoyer un email interne</h1>
+            <p className="page-subtitle">
+              {user.role === "agent"
+                ? "Selectionnez un ou plusieurs administrateurs ou managers, puis redigez un message clair et direct."
+                : "Selectionnez un ou plusieurs destinataires, puis redigez un email professionnel trace dans l'historique."}
+            </p>
+          </div>
+          <Link href="/messages" className="app-btn-soft">
+            <FiArrowLeft className="text-sm" />
+            Retour a la liste
+          </Link>
         </div>
-        <Link href="/messages" className="app-btn-soft">
-          <FiArrowLeft className="text-sm" />
-          Retour a la liste
-        </Link>
       </section>
 
       <MessagesPanel

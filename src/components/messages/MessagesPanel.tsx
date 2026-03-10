@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { Role } from "@prisma/client";
 import Swal from "sweetalert2";
 import {
-  FiCheckSquare,
+  FiAtSign,
+  FiCheck,
   FiChevronLeft,
   FiChevronRight,
-  FiAtSign,
   FiClock,
   FiEye,
   FiInbox,
@@ -16,6 +16,8 @@ import {
   FiSearch,
   FiSend,
   FiTrash2,
+  FiUsers,
+  FiX,
 } from "react-icons/fi";
 
 import Badge from "@/components/ui/Badge";
@@ -84,6 +86,21 @@ export default function MessagesPanel({
       );
     });
   }, [receiverQuery, users]);
+  const filteredUserIds = useMemo(
+    () => filteredUsers.map((user) => user.id),
+    [filteredUsers],
+  );
+  const filteredUserIdSet = useMemo(
+    () => new Set(filteredUserIds),
+    [filteredUserIds],
+  );
+  const filteredSelectedCount = useMemo(
+    () => filteredUserIds.filter((id) => receiverIds.includes(id)).length,
+    [filteredUserIds, receiverIds],
+  );
+  const allFilteredSelected =
+    filteredUserIds.length > 0 &&
+    filteredSelectedCount === filteredUserIds.length;
   const totalPages = Math.max(
     1,
     Math.ceil(sortedMessages.length / itemsPerPage),
@@ -141,6 +158,26 @@ export default function MessagesPanel({
       current.includes(userId)
         ? current.filter((id) => id !== userId)
         : [...current, userId],
+    );
+  };
+
+  const selectFilteredRecipients = () => {
+    if (filteredUserIds.length === 0) {
+      return;
+    }
+
+    setReceiverIds((current) =>
+      Array.from(new Set([...current, ...filteredUserIds])),
+    );
+  };
+
+  const clearFilteredRecipients = () => {
+    if (filteredUserIds.length === 0) {
+      return;
+    }
+
+    setReceiverIds((current) =>
+      current.filter((id) => !filteredUserIdSet.has(id)),
     );
   };
 
@@ -230,192 +267,270 @@ export default function MessagesPanel({
     <div className="space-y-6">
       {showCreate && (
         <section className="message-compose-shell overflow-hidden p-5 md:p-6">
-          <div className="message-compose-grid">
+          <div className="message-compose-head">
             <div>
               <span className="message-kicker">
                 <FiMail className="text-[0.8rem]" />
                 Envoi email direct
               </span>
-              <h2 className="mt-3 text-[clamp(1.25rem,1rem+0.8vw,1.95rem)] font-extrabold tracking-tight text-slate-950">
-                Envoyez des emails professionnels depuis AloPro.
+              <h2 className="message-compose-title">
+                Redaction professionnelle
               </h2>
-              <p className="mt-3 max-w-[48ch] text-sm leading-6 text-slate-600">
-                L&apos;email part directement au destinataire. AloPro conserve
-                seulement un journal des envois effectues par les responsables.
+              <p className="message-compose-subtitle">
+                Selectionnez vos destinataires, redigez un contenu clair, puis
+                envoyez depuis AloPro avec journalisation automatique.
               </p>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="message-stat-card">
-                  <span className="message-stat-icon bg-emerald-100 text-emerald-700">
-                    <FiInbox />
-                  </span>
-                  <div>
-                    <p className="message-stat-value">{selectedRecipients.length}</p>
-                    <p className="message-stat-label">destinataires selectionnes</p>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            <div className="bg-green-100 p-5 rounded-2xl border border-green-100">
-              <p className="text-sm font-semibold text-slate-600">
-                Aperçu des destinataires
-              </p>
-              {selectedRecipients.length > 0 ? (
-                <div className="mt-4 space-y-4">
-                  <div className="space-y-2">
-                    {selectedRecipients.slice(0, 4).map((recipient) => (
-                      <div key={recipient.id} className="flex items-center gap-3">
-                        <span className="message-preview-avatar">
-                          {recipient.firstName.charAt(0)}
-                          {recipient.lastName.charAt(0)}
-                        </span>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">
-                            {recipient.firstName} {recipient.lastName}
-                          </p>
-                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                            {recipient.role}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    {selectedRecipients.length > 4 && (
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                        +{selectedRecipients.length - 4} autres destinataires
-                      </p>
-                    )}
-                  </div>
-                  <div className="rounded-2xl border border-white/70 bg-white/80 p-3 text-xs text-slate-600">
-                    L&apos;email sera envoye a chaque destinataire selectionne et
-                    enregistre dans votre historique d&apos;envoi.
-                  </div>
+            <div className="message-compose-stats">
+              <div className="message-stat-card">
+                <span className="message-stat-icon bg-emerald-100 text-emerald-700">
+                  <FiUsers />
+                </span>
+                <div>
+                  <p className="message-stat-value">{selectedRecipients.length}</p>
+                  <p className="message-stat-label">destinataires coches</p>
                 </div>
-              ) : (
-                <p className="mt-4 text-sm text-slate-500">
-                  Selectionnez un ou plusieurs destinataires pour preparer l&apos;envoi.
-                </p>
-              )}
+              </div>
+              <div className="message-stat-card">
+                <span className="message-stat-icon bg-sky-100 text-sky-700">
+                  <FiSearch />
+                </span>
+                <div>
+                  <p className="message-stat-value">{filteredUsers.length}</p>
+                  <p className="message-stat-label">profils visibles</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <form
-            className="form-grid mt-6 md:grid-cols-2"
-            onSubmit={sendMessage}
-          >
-            <div className="form-field">
-              <label htmlFor="message-receiver" className="field-label">
-                Destinataires
-              </label>
-              <div className="message-input-shell mb-3">
-                <FiSearch className="message-input-icon" />
-                <input
-                  id="message-search"
-                  value={receiverQuery}
-                  onChange={(event) => setReceiverQuery(event.target.value)}
-                  placeholder="Rechercher par nom ou role..."
-                  className="app-input pl-10"
-                />
-              </div>
-              <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-3">
-                {filteredUsers.length === 0 && (
-                  <p className="text-sm text-slate-500">Aucun destinataire disponible.</p>
-                )}
-                {filteredUsers.map((user) => {
-                  const checked = receiverIds.includes(user.id);
+          <form className="mt-6 space-y-6" onSubmit={sendMessage}>
+            <div className="message-compose-layout">
+              <div className="space-y-5">
+                <div className="form-field">
+                  <label htmlFor="message-search" className="field-label">
+                    Destinataires
+                  </label>
+                  <div className="message-input-shell">
+                    <FiSearch className="message-input-icon" />
+                    <input
+                      id="message-search"
+                      value={receiverQuery}
+                      onChange={(event) => setReceiverQuery(event.target.value)}
+                      placeholder="Rechercher par nom ou role..."
+                      className="app-input pl-10"
+                    />
+                  </div>
 
-                  return (
-                    <label
-                      key={user.id}
-                      className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-2 transition ${
-                        checked
-                          ? "border-sky-300 bg-sky-50"
-                          : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="message-preview-avatar">
-                          {user.firstName.charAt(0)}
-                          {user.lastName.charAt(0)}
-                        </span>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">
-                            {user.firstName} {user.lastName}
-                          </p>
-                          <p className="text-xs uppercase tracking-[0.12em] text-slate-500">
-                            {user.role}
+                  <div className="message-recipient-toolbar">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      {filteredSelectedCount}/{filteredUsers.length} selectionnes
+                      sur ce filtre
+                    </p>
+                    <div className="message-recipient-actions">
+                      <button
+                        type="button"
+                        onClick={selectFilteredRecipients}
+                        disabled={filteredUsers.length === 0 || allFilteredSelected}
+                        className="message-toolbar-btn"
+                      >
+                        Tout cocher
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearFilteredRecipients}
+                        disabled={filteredSelectedCount === 0}
+                        className="message-toolbar-btn"
+                      >
+                        Effacer
+                      </button>
+                    </div>
+                  </div>
+
+                  {selectedRecipients.length > 0 ? (
+                    <div className="message-selected-strip" aria-live="polite">
+                      {selectedRecipients.map((recipient) => (
+                        <button
+                          key={recipient.id}
+                          type="button"
+                          onClick={() => toggleRecipient(recipient.id)}
+                          className="message-selected-pill"
+                        >
+                          <span className="message-selected-initials">
+                            {recipient.firstName.charAt(0)}
+                            {recipient.lastName.charAt(0)}
+                          </span>
+                          <span className="max-w-[140px] truncate text-xs font-semibold text-slate-700">
+                            {recipient.firstName} {recipient.lastName}
+                          </span>
+                          <FiX className="text-[0.8rem] text-slate-500" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="field-help">
+                      Cochez un ou plusieurs destinataires pour activer l&apos;envoi.
+                    </p>
+                  )}
+
+                  <div className="message-recipient-list">
+                    {filteredUsers.length === 0 && (
+                      <p className="px-1 py-2 text-sm text-slate-500">
+                        Aucun destinataire disponible.
+                      </p>
+                    )}
+                    {filteredUsers.map((user) => {
+                      const checked = receiverIds.includes(user.id);
+
+                      return (
+                        <label
+                          key={user.id}
+                          className={`message-recipient-card ${checked ? "is-selected" : ""}`}
+                        >
+                          <span className="message-recipient-user">
+                            <span className="message-recipient-avatar">
+                              {user.firstName.charAt(0)}
+                              {user.lastName.charAt(0)}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="message-recipient-name">
+                                {user.firstName} {user.lastName}
+                              </span>
+                              <span className="message-recipient-role">
+                                {user.role}
+                              </span>
+                            </span>
+                          </span>
+                          <span className="message-check-indicator">
+                            <FiCheck className="text-sm" />
+                          </span>
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={checked}
+                            onChange={() => toggleRecipient(user.id)}
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="message-content" className="field-label">
+                    Message
+                  </label>
+                  <div className="message-textarea-shell">
+                    <textarea
+                      id="message-content"
+                      required
+                      maxLength={1200}
+                      value={content}
+                      onChange={(event) => setContent(event.target.value)}
+                      placeholder="Decrivez le besoin, le contexte ou l'information a transmettre..."
+                      className="app-textarea min-h-45 border-0 bg-transparent shadow-none"
+                    />
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                    <span>
+                      Soyez direct: contexte, action attendue et delai utile.
+                    </span>
+                    <span>{content.trim().length}/1200</span>
+                  </div>
+                </div>
+              </div>
+
+              <aside className="space-y-4">
+                <div className="message-sidebar-card">
+                  <p className="message-sidebar-title">Canal</p>
+                  <div className="mt-3 space-y-2">
+                    <div className="message-sidebar-row">
+                      <span className="message-sidebar-pill">
+                        <FiAtSign className="text-[0.8rem]" />
+                        SMTP immediat
+                      </span>
+                    </div>
+                    <div className="message-sidebar-row">
+                      <span className="message-sidebar-pill">
+                        <FiClock className="text-[0.8rem]" />
+                        Historique automatique
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="message-sidebar-card">
+                  <p className="message-sidebar-title">Apercu destinataires</p>
+                  {selectedRecipients.length > 0 ? (
+                    <div className="mt-3 space-y-2">
+                      {selectedRecipients.slice(0, 5).map((recipient) => (
+                        <div
+                          key={recipient.id}
+                          className="message-sidebar-recipient"
+                        >
+                          <span className="message-sidebar-avatar">
+                            {recipient.firstName.charAt(0)}
+                            {recipient.lastName.charAt(0)}
+                          </span>
+                          <p className="truncate text-sm font-semibold text-slate-800">
+                            {recipient.firstName} {recipient.lastName}
                           </p>
                         </div>
-                      </div>
-                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${checked ? "border-sky-400 bg-sky-500 text-white" : "border-slate-300 bg-white text-transparent"}`}>
-                        <FiCheckSquare className="text-sm" />
-                      </span>
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={checked}
-                        onChange={() => toggleRecipient(user.id)}
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="field-help">
-                Choisissez un ou plusieurs collaborateurs concernes par l&apos;échange.
-              </p>
+                      ))}
+                      {selectedRecipients.length > 5 && (
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                          +{selectedRecipients.length - 5} autres destinataires
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="message-sidebar-subtitle">
+                      Aucun destinataire selectionne.
+                    </p>
+                  )}
+                </div>
+
+                <div className="message-sidebar-card">
+                  <p className="message-sidebar-title">Controle avant envoi</p>
+                  <div className="message-checklist">
+                    <p className="message-checklist-item">
+                      <span className="message-checklist-dot" />
+                      Sujet et objectif clarifies des le debut.
+                    </p>
+                    <p className="message-checklist-item">
+                      <span className="message-checklist-dot" />
+                      Action attendue et date limite precisees.
+                    </p>
+                    <p className="message-checklist-item">
+                      <span className="message-checklist-dot" />
+                      Style professionnel et concis.
+                    </p>
+                  </div>
+                </div>
+              </aside>
             </div>
 
-            <div className="form-field">
-              <label htmlFor="message-meta" className="field-label">
-                Canal
-              </label>
-              <div id="message-meta" className="message-meta-card">
-                <span className="inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1.5 text-xs font-semibold text-slate-700">
-                  <FiAtSign className="text-[0.8rem]" />
-                  envoi SMTP immediat
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1.5 text-xs font-semibold text-slate-700">
-                  <FiClock className="text-[0.8rem]" />
-                  historisation automatique
-                </span>
-              </div>
-            </div>
-
-            <div className="form-field md:col-span-2">
-              <label htmlFor="message-content" className="field-label">
-                Message
-              </label>
-              <div className="message-textarea-shell">
-                <textarea
-                  id="message-content"
-                  required
-                  value={content}
-                  onChange={(event) => setContent(event.target.value)}
-                  placeholder="Décrivez le besoin, le contexte ou l'information à transmettre..."
-                  className="app-textarea min-h-45 border-0 bg-transparent shadow-none"
-                />
-              </div>
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-                <span>
-                  Allez droit au but: objet clair, contexte utile, ton
-                  professionnel.
-                </span>
-                <span>{content.trim().length}/1200</span>
-              </div>
-            </div>
-
-            <div className="md:col-span-2 flex flex-wrap items-center justify-between gap-3">
+            <div className="message-compose-footer">
               <p className="text-sm text-slate-500">
                 Seuls les administrateurs et managers peuvent emettre ces emails
                 depuis la plateforme.
               </p>
               <button
                 type="submit"
-                disabled={loading || users.length === 0 || receiverIds.length === 0 || !content.trim()}
-                className="app-btn-primary min-w-[180px]"
+                disabled={
+                  loading ||
+                  users.length === 0 ||
+                  receiverIds.length === 0 ||
+                  !content.trim()
+                }
+                className="app-btn-primary min-w-[200px]"
               >
                 <FiSend className="text-sm" />
-                {loading ? "Envoi..." : receiverIds.length > 1 ? "Envoyer les emails" : "Envoyer l'email"}
+                {loading
+                  ? "Envoi..."
+                  : receiverIds.length > 1
+                    ? "Envoyer les emails"
+                    : "Envoyer l'email"}
               </button>
             </div>
           </form>
@@ -542,3 +657,4 @@ export default function MessagesPanel({
     </div>
   );
 }
+
