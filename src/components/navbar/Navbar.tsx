@@ -6,6 +6,7 @@ import Swal from "sweetalert2";
 import { usePathname } from "next/navigation";
 import { FiChevronLeft, FiChevronRight, FiLogOut, FiMenu, FiShield } from "react-icons/fi";
 
+import BrandMark from "@/components/brand/BrandMark";
 import { getRoleLabel } from "@/lib/navigation";
 import { Role } from "@prisma/client";
 
@@ -23,6 +24,7 @@ const sectionByPath: Record<string, string> = {
   "/projects": "Projets",
   "/tasks": "Taches",
   "/messages": "Messages",
+  "/files": "Fichiers",
   "/settings": "Parametres",
 };
 
@@ -90,6 +92,9 @@ export default function Navbar({
         >
           {desktopCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
         </button>
+        <div className="hidden min-[480px]:block md:hidden">
+          <BrandMark compact subtitle="Workspace" />
+        </div>
       </div>
 
       <div className="mr-auto min-w-0">

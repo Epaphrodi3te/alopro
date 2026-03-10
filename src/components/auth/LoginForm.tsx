@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiLogIn } from "react-icons/fi";
+import { FiLock, FiLogIn, FiMail } from "react-icons/fi";
 
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
 
@@ -48,7 +48,8 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="form-grid">
       <div className="form-field">
-        <label htmlFor="email" className="field-label">
+        <label htmlFor="email" className="field-label inline-flex items-center gap-1.5">
+          <FiMail className="text-[0.72rem]" />
           Email
         </label>
         <input
@@ -59,11 +60,14 @@ export default function LoginForm() {
           onChange={(event) => setEmail(event.target.value)}
           className="app-input"
           placeholder="admin@alopro.com"
+          autoComplete="email"
         />
+        <p className="field-help">Adresse de connexion de votre compte.</p>
       </div>
 
       <div className="form-field">
-        <label htmlFor="password" className="field-label">
+        <label htmlFor="password" className="field-label inline-flex items-center gap-1.5">
+          <FiLock className="text-[0.72rem]" />
           Mot de passe
         </label>
         <input
@@ -74,7 +78,9 @@ export default function LoginForm() {
           onChange={(event) => setPassword(event.target.value)}
           className="app-input"
           placeholder="********"
+          autoComplete="current-password"
         />
+        <p className="field-help">Au moins 8 caracteres.</p>
       </div>
 
       <button

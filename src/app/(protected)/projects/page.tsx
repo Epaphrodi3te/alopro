@@ -1,24 +1,28 @@
+import Link from "next/link";
+import { FiFolder, FiPlus } from "react-icons/fi";
 import { Prisma } from "@prisma/client";
 
 import ProjectsPanel from "@/components/projects/ProjectsPanel";
 import { requireUser } from "@/lib/auth";
+import { getProjectVisibilityWhereForUser } from "@/lib/project-visibility";
 import prisma from "@/lib/prisma";
 
 export default async function ProjectsPage() {
   const user = await requireUser();
 
-  let where: Prisma.ProjectWhereInput = {};
+  const where: Prisma.ProjectWhereInput = getProjectVisibilityWhereForUser({
+    id: user.id,
+    role: user.role,
+  });
 
-  if (user.role === "manager") {
-    where = {
-      OR: [{ createdById: user.id }, { assignedToId: user.id }],
-    };
+  let assigneeWhere: Prisma.UserWhereInput | null = null;
+
+  if (user.role === "admin") {
+    assigneeWhere = { role: { in: ["manager", "agent"] } };
   }
 
-  if (user.role === "agent") {
-    where = {
-      assignedToId: user.id,
-    };
+  if (user.role === "manager") {
+    assigneeWhere = { role: "agent" };
   }
 
   const [projects, assignees] = await Promise.all([
@@ -26,6 +30,11 @@ export default async function ProjectsPage() {
       where,
       orderBy: { createdAt: "desc" },
       include: {
+        tasks: {
+          select: {
+            status: true,
+          },
+        },
         createdBy: {
           select: {
             id: true,
@@ -42,14 +51,26 @@ export default async function ProjectsPage() {
             role: true,
           },
         },
+        memberships: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+              },
+            },
+          },
+        },
         _count: {
           select: { tasks: true },
         },
       },
     }),
-    user.role === "admin"
+    assigneeWhere
       ? prisma.user.findMany({
-          where: { role: { in: ["manager", "agent"] } },
+          where: assigneeWhere,
           select: {
             id: true,
             firstName: true,
@@ -63,14 +84,29 @@ export default async function ProjectsPage() {
 
   return (
     <div className="space-y-5">
-      <section>
-        <h1 className="page-title text-slate-900">Projets</h1>
-        <p className="page-subtitle">
-          Gestion des projets avec controle par role et assignation securisee.
-        </p>
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-sky-700">
+            <FiFolder className="text-[12px]" />
+            Gestion projets
+          </p>
+          <h1 className="page-title text-slate-900">Projets</h1>
+          <p className="page-subtitle">
+            Vue epuree: seul le nom du projet est affiche ici. Utilisez Voir details pour consulter le reste.
+          </p>
+        </div>
+        <Link href="/projects/new" className="app-btn-primary">
+          <FiPlus className="text-sm" />
+          Nouveau
+        </Link>
       </section>
 
-      <ProjectsPanel projects={projects} role={user.role} currentUserId={user.id} assignees={assignees} />
+      <ProjectsPanel
+        projects={projects}
+        role={user.role}
+        assignees={assignees}
+        view="list"
+      />
     </div>
   );
 }
