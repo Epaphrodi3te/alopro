@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiCalendar, FiEdit2, FiEye, FiMail, FiPlusCircle, FiShield, FiTrash2, FiUser, FiUserPlus } from "react-icons/fi";
+import { FiCalendar, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiMail, FiPlusCircle, FiShield, FiTrash2, FiUser, FiUserPlus } from "react-icons/fi";
 import Swal from "sweetalert2";
 
 import Badge from "@/components/ui/Badge";
@@ -52,9 +52,11 @@ export default function UsersPanel({
   redirectAfterCreate,
 }: UsersPanelProps) {
   const router = useRouter();
+  const itemsPerPage = 6;
 
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const showCreate = view !== "list";
   const showList = view !== "create";
@@ -63,6 +65,11 @@ export default function UsersPanel({
     () => [...users].sort((a, b) => Number(new Date(b.createdAt)) - Number(new Date(a.createdAt))),
     [users],
   );
+  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / itemsPerPage));
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedUsers.slice(start, start + itemsPerPage);
+  }, [currentPage, sortedUsers]);
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -217,23 +224,6 @@ export default function UsersPanel({
     } catch {
       await showError("Erreur reseau", "Impossible de modifier l'utilisateur.");
     }
-  };
-
-  const viewUserDetails = async (user: BasicUser) => {
-    await Swal.fire({
-      title: "Details utilisateur",
-      html: `
-        <div style="text-align:left;padding:0 6px;">
-          <p><strong>Nom:</strong> ${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</p>
-          <p><strong>Role:</strong> ${escapeHtml(user.role)}</p>
-          <p><strong>Departement:</strong> ${escapeHtml(getDepartmentLabel(user.department))}</p>
-          <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
-          <p><strong>Telephone:</strong> ${escapeHtml(user.phone ?? "-")}</p>
-          <p><strong>Date de creation:</strong> ${new Date(user.createdAt).toLocaleDateString()}</p>
-        </div>
-      `,
-      confirmButtonText: "Fermer",
-    });
   };
 
   const deleteUser = async (user: BasicUser) => {
@@ -412,7 +402,7 @@ export default function UsersPanel({
             </article>
           )}
 
-          {sortedUsers.map((user) => (
+          {paginatedUsers.map((user) => (
             <article
               key={user.id}
               className="group rounded-2xl border border-slate-200 bg-[linear-gradient(165deg,#ffffff,#f8fafc_85%)] p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
@@ -483,6 +473,34 @@ export default function UsersPanel({
               </div>
             </article>
           ))}
+
+          {sortedUsers.length > 0 && (
+            <div className="message-pagination">
+              <p className="text-sm text-slate-500">
+                Page {currentPage} sur {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="app-btn-soft"
+                >
+                  <FiChevronLeft className="text-sm" />
+                  Precedent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="app-btn-soft"
+                >
+                  Suivant
+                  <FiChevronRight className="text-sm" />
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       )}
     </div>
