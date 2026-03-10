@@ -616,41 +616,6 @@ export default function TasksPanel({
                   </div>
                 </div>
 
-<<<<<<< HEAD
-      <section>
-        <DataTable
-          columns={[
-            "Tache",
-            "Projet",
-            "Priorite",
-            "Statut",
-            "Assignee",
-            "Deadline",
-            "Date",
-            "Actions",
-          ]}
-          emptyLabel="Aucune tache trouvee."
-          hasRows={sortedTasks.length > 0}
-        >
-          {sortedTasks.map((task) => (
-            <tr key={task.id} className="border-t border-slate-200">
-              <td data-label="Tache" className="px-4 py-3">
-                <p className="font-semibold text-slate-900">{task.title}</p>
-                <p className="max-w-xs text-xs text-slate-500">{task.description}</p>
-              </td>
-              <td data-label="Projet" className="px-4 py-3">{task.project?.title ?? "Sans projet"}</td>
-              <td data-label="Priorite" className="px-4 py-3">{priorityBadge(task.priority)}</td>
-              <td data-label="Statut" className="px-4 py-3">{statusBadge(task.status)}</td>
-              <td data-label="Assignee" className="px-4 py-3">
-                {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "-"}
-              </td>
-              <td data-label="Deadline" className="px-4 py-3">
-                {task.deadline ? new Date(task.deadline).toLocaleDateString() : "-"}
-              </td>
-              <td data-label="Date" className="px-4 py-3">{new Date(task.createdAt).toLocaleDateString()}</td>
-              <td data-label="Actions" className="px-4 py-3">
-=======
->>>>>>> 898a663db502c53f02b1fcac6ba23d89d75dadb5
                 <div className="flex flex-wrap gap-2">
                   <Link href={`/tasks/${task.id}`} className="app-btn-primary">
                     <FiEye className="text-xs" />

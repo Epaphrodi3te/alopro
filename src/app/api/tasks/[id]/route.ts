@@ -118,15 +118,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
   }
 
   const managedByCurrentManager =
-<<<<<<< HEAD
-    task.project !== null &&
-    (task.project.createdById === current.id || task.project.assignedToId === current.id);
-=======
     !!task.project &&
     (task.project.createdById === current.id ||
       task.project.assignedToId === current.id ||
       task.project.memberships.some((member) => member.userId === current.id));
->>>>>>> 898a663db502c53f02b1fcac6ba23d89d75dadb5
 
   if (!canEditTask(current, task, managedByCurrentManager)) {
     return apiError("Forbidden", 403);

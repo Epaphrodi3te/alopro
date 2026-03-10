@@ -4,7 +4,6 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Role } from "@prisma/client";
 import Swal from "sweetalert2";
-import { Role } from "@prisma/client";
 import {
   FiCheckSquare,
   FiChevronLeft,
@@ -16,6 +15,7 @@ import {
   FiMail,
   FiSearch,
   FiSend,
+  FiTrash2,
 } from "react-icons/fi";
 
 import Badge from "@/components/ui/Badge";

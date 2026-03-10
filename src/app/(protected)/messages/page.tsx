@@ -74,6 +74,7 @@ export default async function MessagesPage() {
       <MessagesPanel
         messages={messages}
         users={users}
+        role={user.role}
         view="list"
         currentUserId={user.id}
         currentUserRole={user.role}
