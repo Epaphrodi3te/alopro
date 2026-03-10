@@ -36,7 +36,7 @@ export type TaskItem = {
   id: string;
   title: string;
   description: string;
-  projectId?: string;
+  projectId?: string | null;
   createdById?: string;
   assignedToId?: string | null;
   priority: TaskPriority;
@@ -47,7 +47,7 @@ export type TaskItem = {
     id: string;
     title: string;
     status: ProjectStatus;
-  };
+  } | null;
   createdBy: UserLight;
   assignedTo: UserLight | null;
 };

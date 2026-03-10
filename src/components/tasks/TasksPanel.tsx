@@ -374,7 +374,7 @@ export default function TasksPanel({ tasks, role, projects, agents }: TasksPanel
                 <p className="font-semibold text-slate-900">{task.title}</p>
                 <p className="max-w-xs text-xs text-slate-500">{task.description}</p>
               </td>
-              <td data-label="Projet" className="px-4 py-3">{task.project.title}</td>
+              <td data-label="Projet" className="px-4 py-3">{task.project?.title ?? "Sans projet"}</td>
               <td data-label="Priorite" className="px-4 py-3">{priorityBadge(task.priority)}</td>
               <td data-label="Statut" className="px-4 py-3">{statusBadge(task.status)}</td>
               <td data-label="Assignee" className="px-4 py-3">
