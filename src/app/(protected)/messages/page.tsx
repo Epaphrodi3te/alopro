@@ -1,27 +1,18 @@
 import Link from "next/link";
 import { FiMail, FiPlus } from "react-icons/fi";
-import { Role } from "@prisma/client";
-import { redirect } from "next/navigation";
 
 import MessagesPanel from "@/components/messages/MessagesPanel";
 import { requireUser } from "@/lib/auth";
+import { canSendDirectEmail } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
-
-function canSendDirectEmail(role: Role) {
-  return role === "admin" || role === "manager";
-}
 
 export default async function MessagesPage() {
   const user = await requireUser();
 
-  if (!canSendDirectEmail(user.role)) {
-    redirect("/dashboard");
-  }
-
   const [messages, users] = await Promise.all([
     prisma.message.findMany({
       where: {
-        senderId: user.id,
+        OR: [{ senderId: user.id }, { receiverId: user.id }],
       },
       orderBy: { createdAt: "desc" },
       include: {
@@ -67,16 +58,26 @@ export default async function MessagesPage() {
           </p>
           <h1 className="page-title text-slate-900">Messages</h1>
           <p className="page-subtitle">
-            Historique des emails envoyes. Cliquez sur Nouveau pour rediger un email direct.
+            {user.role === "agent"
+              ? "Consultez vos messages recus et envoyez seulement aux administrateurs et managers."
+              : "Historique des emails envoyes et recus. Cliquez sur Nouveau pour rediger un email direct."}
           </p>
         </div>
-        <Link href="/messages/new" className="app-btn-primary">
-          <FiPlus className="text-sm" />
-          Nouveau
-        </Link>
+        {canSendDirectEmail(user.role) && (
+          <Link href="/messages/new" className="app-btn-primary">
+            <FiPlus className="text-sm" />
+            Nouveau
+          </Link>
+        )}
       </section>
 
-      <MessagesPanel messages={messages} users={users} view="list" />
+      <MessagesPanel
+        messages={messages}
+        users={users}
+        view="list"
+        currentUserId={user.id}
+        currentUserRole={user.role}
+      />
     </div>
   );
 }

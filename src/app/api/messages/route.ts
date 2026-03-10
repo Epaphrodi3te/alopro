@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { Role } from "@prisma/client";
 
 import { apiError } from "@/lib/api";
 import { isMailerConfigured, sendMessageNotificationEmail } from "@/lib/mailer";
 import { requireApiUser } from "@/lib/auth";
+import { canSendDirectEmail, canSendMessageToRole } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
 
 const createMessageSchema = z.object({
-  receiverId: z.string().cuid(),
+  receiverIds: z.array(z.string().cuid()).min(1).max(100),
   content: z.string().trim().min(1).max(1200),
 });
-
-function canSendDirectEmail(role: Role) {
-  return role === "admin" || role === "manager";
-}
 
 export async function GET(request: NextRequest) {
   const user = await requireApiUser(request);
@@ -22,13 +18,9 @@ export async function GET(request: NextRequest) {
     return apiError("Unauthorized", 401);
   }
 
-  if (!canSendDirectEmail(user.role)) {
-    return apiError("Forbidden", 403);
-  }
-
   const messages = await prisma.message.findMany({
     where: {
-      senderId: user.id,
+      OR: [{ senderId: user.id }, { receiverId: user.id }],
     },
     orderBy: { createdAt: "desc" },
     include: {
@@ -72,22 +64,29 @@ export async function POST(request: NextRequest) {
       return apiError("Donnees de message invalides.", 400);
     }
 
-    if (parsed.data.receiverId === user.id) {
+    const uniqueReceiverIds = [...new Set(parsed.data.receiverIds)];
+
+    if (uniqueReceiverIds.includes(user.id)) {
       return apiError("Vous ne pouvez pas vous envoyer un message.", 400);
     }
 
-    const receiver = await prisma.user.findUnique({
-      where: { id: parsed.data.receiverId },
+    const receivers = await prisma.user.findMany({
+      where: { id: { in: uniqueReceiverIds } },
       select: {
         id: true,
         email: true,
         firstName: true,
         lastName: true,
+        role: true,
       },
     });
 
-    if (!receiver) {
-      return apiError("Destinataire introuvable.", 404);
+    if (receivers.length !== uniqueReceiverIds.length) {
+      return apiError("Un ou plusieurs destinataires sont introuvables.", 404);
+    }
+
+    if (receivers.some((receiver) => !canSendMessageToRole(user.role, receiver.role))) {
+      return apiError("Un agent peut envoyer des messages seulement aux administrateurs et managers.", 403);
     }
 
     if (!isMailerConfigured()) {
@@ -95,46 +94,30 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      await sendMessageNotificationEmail({
-        receiverEmail: receiver.email,
-        receiverName: `${receiver.firstName} ${receiver.lastName}`,
-        senderName: `${user.firstName} ${user.lastName}`,
-        content: parsed.data.content,
-      });
+      for (const receiver of receivers) {
+        await sendMessageNotificationEmail({
+          receiverEmail: receiver.email,
+          receiverName: `${receiver.firstName} ${receiver.lastName}`,
+          senderName: `${user.firstName} ${user.lastName}`,
+          content: parsed.data.content,
+        });
+      }
     } catch {
       return apiError("L'envoi de l'email a echoue. Verifiez la configuration SMTP.", 502);
     }
 
-    const message = await prisma.message.create({
-      data: {
+    await prisma.message.createMany({
+      data: receivers.map((receiver) => ({
         senderId: user.id,
         receiverId: receiver.id,
         content: parsed.data.content,
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            role: true,
-          },
-        },
-        receiver: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            role: true,
-          },
-        },
-      },
+      })),
     });
 
     return NextResponse.json(
       {
-        message: "Message envoye.",
-        data: message,
+        message: receivers.length === 1 ? "Message envoye." : "Messages envoyes.",
+        sentCount: receivers.length,
         emailNotificationSent: true,
       },
       { status: 201 },

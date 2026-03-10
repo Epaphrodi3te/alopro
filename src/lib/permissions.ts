@@ -71,5 +71,13 @@ export function canDeleteTask(role: Role) {
 }
 
 export function canSendDirectEmail(role: Role) {
-  return role === "admin" || role === "manager";
+  return role === "admin" || role === "manager" || role === "agent";
+}
+
+export function canSendMessageToRole(senderRole: Role, receiverRole: Role) {
+  if (senderRole === "agent") {
+    return receiverRole === "admin" || receiverRole === "manager";
+  }
+
+  return true;
 }
