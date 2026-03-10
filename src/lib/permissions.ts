@@ -39,7 +39,7 @@ export function canDeleteProject(role: Role) {
 }
 
 export function canAssignProject(role: Role) {
-  return role === "admin";
+  return role === "admin" || role === "manager";
 }
 
 export function canCreateTask(role: Role) {
@@ -60,7 +60,7 @@ export function canEditTask(
   }
 
   if (user.role === "manager") {
-    return managedByCurrentManager || task.createdById === user.id;
+    return managedByCurrentManager || task.createdById === user.id || task.assignedToId === user.id;
   }
 
   return task.assignedToId === user.id;

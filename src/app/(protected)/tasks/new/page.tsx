@@ -4,24 +4,28 @@ import { Prisma } from "@prisma/client";
 
 import TasksPanel from "@/components/tasks/TasksPanel";
 import { requireUser } from "@/lib/auth";
+import { getProjectVisibilityWhereForUser } from "@/lib/project-visibility";
 import prisma from "@/lib/prisma";
 
 export default async function NewTaskPage() {
   const user = await requireUser();
 
-  let projectWhere: Prisma.ProjectWhereInput = {};
+  const projectWhere: Prisma.ProjectWhereInput = getProjectVisibilityWhereForUser({
+    id: user.id,
+    role: user.role,
+  });
+
+  let assigneeWhere: Prisma.UserWhereInput | null = null;
+
+  if (user.role === "admin") {
+    assigneeWhere = { role: { in: ["manager", "agent"] } };
+  }
 
   if (user.role === "manager") {
-    projectWhere = {
-      OR: [{ createdById: user.id }, { assignedToId: user.id }],
-    };
+    assigneeWhere = { role: "agent" };
   }
 
-  if (user.role === "agent") {
-    projectWhere = { assignedToId: user.id };
-  }
-
-  const [projects, agents] = await Promise.all([
+  const [projects, assignees] = await Promise.all([
     prisma.project.findMany({
       where: projectWhere,
       orderBy: { createdAt: "desc" },
@@ -30,9 +34,9 @@ export default async function NewTaskPage() {
         title: true,
       },
     }),
-    user.role === "admin" || user.role === "manager"
+    assigneeWhere
       ? prisma.user.findMany({
-          where: { role: "agent" },
+          where: assigneeWhere,
           orderBy: { createdAt: "desc" },
           select: {
             id: true,
@@ -50,7 +54,7 @@ export default async function NewTaskPage() {
         <div>
           <h1 className="page-title text-slate-900">Nouvelle tache</h1>
           <p className="page-subtitle">
-            Creez une tache et assignez-la a un agent selon votre role.
+            Creez une tache et assignez-la a un agent ou a un manager selon vos permissions.
           </p>
         </div>
         <Link href="/tasks" className="app-btn-soft">
@@ -63,7 +67,7 @@ export default async function NewTaskPage() {
         tasks={[]}
         role={user.role}
         projects={projects}
-        agents={agents}
+        agents={assignees}
         view="create"
         redirectAfterCreate="/tasks"
       />

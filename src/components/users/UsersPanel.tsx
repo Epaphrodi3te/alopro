@@ -1,11 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiEdit2, FiEye, FiPlusCircle, FiShield, FiTrash2, FiUserPlus } from "react-icons/fi";
+import { FiCalendar, FiEdit2, FiEye, FiMail, FiPlusCircle, FiShield, FiTrash2, FiUser, FiUserPlus } from "react-icons/fi";
 import Swal from "sweetalert2";
 
-import DataTable from "@/components/tables/DataTable";
 import Badge from "@/components/ui/Badge";
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
 import { DEPARTMENT_OPTIONS, getDepartmentLabel } from "@/lib/constants";
@@ -28,6 +28,22 @@ const initialForm = {
   role: "agent",
   department: "software_development",
 };
+
+function roleLabel(role: "admin" | "manager" | "agent") {
+  if (role === "admin") {
+    return "Administrateur";
+  }
+
+  if (role === "manager") {
+    return "Manager";
+  }
+
+  return "Agent";
+}
+
+function formatDate(value: Date) {
+  return new Date(value).toLocaleDateString();
+}
 
 export default function UsersPanel({
   users,
@@ -389,54 +405,84 @@ export default function UsersPanel({
       )}
 
       {showList && (
-        <section>
-          <DataTable
-            columns={["Nom", "Departement", "Role", "Actions"]}
-            emptyLabel="Aucun utilisateur trouve."
-            hasRows={sortedUsers.length > 0}
-          >
-            {sortedUsers.map((user) => (
-              <tr key={user.id} className="border-t border-slate-200">
-                <td data-label="Nom" className="px-4 py-3 font-semibold text-slate-900">{user.firstName} {user.lastName}</td>
-                <td data-label="Departement" className="px-4 py-3 text-sm text-slate-600">{getDepartmentLabel(user.department)}</td>
-                <td data-label="Role" className="px-4 py-3">
-                  <Badge
-                    label={user.role}
-                    variant={user.role === "admin" ? "admin" : user.role === "manager" ? "manager" : "agent"}
-                  />
-                </td>
-                <td data-label="Actions" className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => viewUserDetails(user)}
-                      className="app-btn-soft"
-                    >
-                      <FiEye className="text-xs" />
-                      Voir details
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => editUser(user)}
-                      className="app-btn-soft"
-                    >
-                      <FiEdit2 className="text-xs" />
-                      Modifier
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteUser(user)}
-                      disabled={user.id === currentUserId}
-                      className="app-btn-danger"
-                    >
-                      <FiTrash2 className="text-xs" />
-                      Supprimer
-                    </button>
+        <section className="space-y-3">
+          {sortedUsers.length === 0 && (
+            <article className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
+              Aucun utilisateur trouve.
+            </article>
+          )}
+
+          {sortedUsers.map((user) => (
+            <article
+              key={user.id}
+              className="group rounded-2xl border border-slate-200 bg-[linear-gradient(165deg,#ffffff,#f8fafc_85%)] p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-700">
+                    <FiUser />
+                    Utilisateur
                   </div>
-                </td>
-              </tr>
-            ))}
-          </DataTable>
+                  <p className="mt-2 truncate text-base font-semibold text-slate-900">{user.firstName} {user.lastName}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/users/${user.id}`} className="app-btn-primary">
+                    <FiEye className="text-xs" />
+                    Voir details
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => editUser(user)}
+                    className="app-btn-soft"
+                  >
+                    <FiEdit2 className="text-xs" />
+                    Modifier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteUser(user)}
+                    disabled={user.id === currentUserId}
+                    className="app-btn-danger"
+                  >
+                    <FiTrash2 className="text-xs" />
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                  <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <FiUser />
+                    Role
+                  </p>
+                  <div className="mt-1">
+                    <Badge
+                      label={roleLabel(user.role)}
+                      variant={user.role === "admin" ? "admin" : user.role === "manager" ? "manager" : "agent"}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                  <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <FiMail />
+                    Email
+                  </p>
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-800">{user.email}</p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                  <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <FiCalendar />
+                    Cree le
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">{formatDate(user.createdAt)}</p>
+                </div>
+              </div>
+            </article>
+          ))}
         </section>
       )}
     </div>

@@ -4,35 +4,33 @@ import { Prisma } from "@prisma/client";
 
 import TasksPanel from "@/components/tasks/TasksPanel";
 import { requireUser } from "@/lib/auth";
+import { getProjectVisibilityWhereForUser } from "@/lib/project-visibility";
+import { getTaskVisibilityWhereForUser } from "@/lib/task-visibility";
 import prisma from "@/lib/prisma";
 
 export default async function TasksPage() {
   const user = await requireUser();
 
-  let taskWhere: Prisma.TaskWhereInput = {};
-  let projectWhere: Prisma.ProjectWhereInput = {};
+  const taskWhere: Prisma.TaskWhereInput = getTaskVisibilityWhereForUser({
+    id: user.id,
+    role: user.role,
+  });
+  const projectWhere: Prisma.ProjectWhereInput = getProjectVisibilityWhereForUser({
+    id: user.id,
+    role: user.role,
+  });
+
+  let assigneeWhere: Prisma.UserWhereInput | null = null;
+
+  if (user.role === "admin") {
+    assigneeWhere = { role: { in: ["manager", "agent"] } };
+  }
 
   if (user.role === "manager") {
-    taskWhere = {
-      OR: [
-        { createdById: user.id },
-        { assignedToId: user.id },
-        { project: { createdById: user.id } },
-        { project: { assignedToId: user.id } },
-      ],
-    };
-
-    projectWhere = {
-      OR: [{ createdById: user.id }, { assignedToId: user.id }],
-    };
+    assigneeWhere = { role: "agent" };
   }
 
-  if (user.role === "agent") {
-    taskWhere = { assignedToId: user.id };
-    projectWhere = { assignedToId: user.id };
-  }
-
-  const [tasks, projects, agents] = await Promise.all([
+  const [tasks, projects, assignees] = await Promise.all([
     prisma.task.findMany({
       where: taskWhere,
       orderBy: { createdAt: "desc" },
@@ -70,9 +68,9 @@ export default async function TasksPage() {
         title: true,
       },
     }),
-    user.role === "admin" || user.role === "manager"
+    assigneeWhere
       ? prisma.user.findMany({
-          where: { role: "agent" },
+          where: assigneeWhere,
           orderBy: { createdAt: "desc" },
           select: {
             id: true,
@@ -99,7 +97,7 @@ export default async function TasksPage() {
         </Link>
       </section>
 
-      <TasksPanel tasks={tasks} role={user.role} projects={projects} agents={agents} view="list" />
+      <TasksPanel tasks={tasks} role={user.role} projects={projects} agents={assignees} view="list" />
     </div>
   );
 }
