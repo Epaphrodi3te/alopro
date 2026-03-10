@@ -89,8 +89,8 @@ export type MessageItem = {
   id: string;
   content: string;
   createdAt: Date;
-  senderId?: string;
-  receiverId?: string;
+  senderId: string;
+  receiverId: string;
   sender: UserLight;
   receiver: UserLight;
 };

@@ -2,9 +2,11 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Role } from "@prisma/client";
 import Swal from "sweetalert2";
 import { Role } from "@prisma/client";
 import {
+  FiCheckSquare,
   FiChevronLeft,
   FiChevronRight,
   FiAtSign,
@@ -14,8 +16,6 @@ import {
   FiMail,
   FiSearch,
   FiSend,
-  FiTrash2,
-  FiUser,
 } from "react-icons/fi";
 
 import Badge from "@/components/ui/Badge";
@@ -24,6 +24,7 @@ import {
   showError,
   showSuccess,
 } from "@/components/ui/notify";
+import { canSendDirectEmail } from "@/lib/permissions";
 import { MessageItem, UserLight } from "@/lib/types";
 
 type MessagesPanelProps = {
@@ -32,6 +33,8 @@ type MessagesPanelProps = {
   role: Role;
   view?: "all" | "list" | "create";
   redirectAfterCreate?: string;
+  currentUserId: string;
+  currentUserRole: Role;
 };
 
 export default function MessagesPanel({
@@ -40,17 +43,20 @@ export default function MessagesPanel({
   role,
   view = "all",
   redirectAfterCreate,
+  currentUserId,
+  currentUserRole,
 }: MessagesPanelProps) {
   const router = useRouter();
   const itemsPerPage = 6;
+  const canCompose = canSendDirectEmail(currentUserRole);
 
-  const [receiverId, setReceiverId] = useState(users[0]?.id ?? "");
+  const [receiverIds, setReceiverIds] = useState<string[]>([]);
   const [receiverQuery, setReceiverQuery] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const showCreate = view !== "list";
+  const showCreate = view !== "list" && canCompose;
   const showList = view !== "create";
 
   const sortedMessages = useMemo(
@@ -60,8 +66,10 @@ export default function MessagesPanel({
       ),
     [messages],
   );
-  const selectedRecipient =
-    users.find((user) => user.id === receiverId) ?? null;
+  const selectedRecipients = useMemo(
+    () => users.filter((user) => receiverIds.includes(user.id)),
+    [receiverIds, users],
+  );
   const filteredUsers = useMemo(() => {
     const normalizedQuery = receiverQuery.trim().toLowerCase();
     if (!normalizedQuery) {
@@ -84,6 +92,7 @@ export default function MessagesPanel({
     const start = (currentPage - 1) * itemsPerPage;
     return sortedMessages.slice(start, start + itemsPerPage);
   }, [currentPage, sortedMessages]);
+  const isAgent = currentUserRole === "agent";
 
   const openMessagePreview = async (message: MessageItem) => {
     const safeContent = message.content
@@ -92,17 +101,21 @@ export default function MessagesPanel({
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
+    const directionLabel =
+      message.sender.id === currentUserId
+        ? `Envoye a ${message.receiver.firstName} ${message.receiver.lastName}`
+        : `Recu de ${message.sender.firstName} ${message.sender.lastName}`;
 
     await Swal.fire({
-      title: "Email envoye",
+      title: "Message",
       html: `
         <div class="swal-pro-form">
           <div class="swal-user-shell">
             <div class="swal-user-head">
-              <span class="swal-user-avatar">${message.receiver.firstName.charAt(0)}${message.receiver.lastName.charAt(0)}</span>
+              <span class="swal-user-avatar">${message.sender.id === currentUserId ? `${message.receiver.firstName.charAt(0)}${message.receiver.lastName.charAt(0)}` : `${message.sender.firstName.charAt(0)}${message.sender.lastName.charAt(0)}`}</span>
               <div class="swal-user-meta">
-                <p class="swal-user-name">${message.receiver.firstName} ${message.receiver.lastName}</p>
-                <p class="swal-user-role">Envoye le ${new Date(message.createdAt).toLocaleString()}</p>
+                <p class="swal-user-name">${directionLabel}</p>
+                <p class="swal-user-role">${new Date(message.createdAt).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -123,6 +136,14 @@ export default function MessagesPanel({
     });
   };
 
+  const toggleRecipient = (userId: string) => {
+    setReceiverIds((current) =>
+      current.includes(userId)
+        ? current.filter((id) => id !== userId)
+        : [...current, userId],
+    );
+  };
+
   const sendMessage = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
@@ -133,7 +154,7 @@ export default function MessagesPanel({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ receiverId, content }),
+        body: JSON.stringify({ receiverIds, content }),
       });
 
       if (!response.ok) {
@@ -143,14 +164,17 @@ export default function MessagesPanel({
 
       const data = (await response.json()) as {
         emailNotificationSent?: boolean;
+        sentCount?: number;
       };
       setContent("");
       setReceiverQuery("");
-      setReceiverId(users[0]?.id ?? "");
+      setReceiverIds([]);
       await showSuccess(
-        "Email envoye",
+        data.sentCount && data.sentCount > 1 ? "Messages envoyes" : "Email envoye",
         data.emailNotificationSent
-          ? "L'email a ete envoye et journalise dans l'historique."
+          ? data.sentCount && data.sentCount > 1
+            ? `${data.sentCount} emails ont ete envoyes et journalises dans l'historique.`
+            : "L'email a ete envoye et journalise dans l'historique."
           : "L'envoi n'a pas pu etre confirme.",
       );
 
@@ -226,8 +250,8 @@ export default function MessagesPanel({
                     <FiInbox />
                   </span>
                   <div>
-                    <p className="message-stat-value">{filteredUsers.length}</p>
-                    <p className="message-stat-label">profils trouves</p>
+                    <p className="message-stat-value">{selectedRecipients.length}</p>
+                    <p className="message-stat-label">destinataires selectionnes</p>
                   </div>
                 </div>
               </div>
@@ -235,33 +259,41 @@ export default function MessagesPanel({
 
             <div className="bg-green-100 p-5 rounded-2xl border border-green-100">
               <p className="text-sm font-semibold text-slate-600">
-                Aperçu du destinataire
+                Aperçu des destinataires
               </p>
-              {selectedRecipient ? (
+              {selectedRecipients.length > 0 ? (
                 <div className="mt-4 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="message-preview-avatar">
-                      {selectedRecipient.firstName.charAt(0)}
-                      {selectedRecipient.lastName.charAt(0)}
-                    </span>
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">
-                        {selectedRecipient.firstName}{" "}
-                        {selectedRecipient.lastName}
-                      </p>
+                  <div className="space-y-2">
+                    {selectedRecipients.slice(0, 4).map((recipient) => (
+                      <div key={recipient.id} className="flex items-center gap-3">
+                        <span className="message-preview-avatar">
+                          {recipient.firstName.charAt(0)}
+                          {recipient.lastName.charAt(0)}
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">
+                            {recipient.firstName} {recipient.lastName}
+                          </p>
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                            {recipient.role}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {selectedRecipients.length > 4 && (
                       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                        {selectedRecipient.role}
+                        +{selectedRecipients.length - 4} autres destinataires
                       </p>
-                    </div>
+                    )}
                   </div>
                   <div className="rounded-2xl border border-white/70 bg-white/80 p-3 text-xs text-slate-600">
-                    L&apos;email sera envoye directement a cette personne et
+                    L&apos;email sera envoye a chaque destinataire selectionne et
                     enregistre dans votre historique d&apos;envoi.
                   </div>
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-slate-500">
-                  Sélectionnez un destinataire pour préparer l&apos;envoi.
+                  Selectionnez un ou plusieurs destinataires pour preparer l&apos;envoi.
                 </p>
               )}
             </div>
@@ -273,7 +305,7 @@ export default function MessagesPanel({
           >
             <div className="form-field">
               <label htmlFor="message-receiver" className="field-label">
-                Destinataire
+                Destinataires
               </label>
               <div className="message-input-shell mb-3">
                 <FiSearch className="message-input-icon" />
@@ -285,27 +317,51 @@ export default function MessagesPanel({
                   className="app-input pl-10"
                 />
               </div>
-              <div className="message-input-shell">
-                <FiUser className="message-input-icon" />
-                <select
-                  id="message-receiver"
-                  required
-                  value={receiverId}
-                  onChange={(event) => setReceiverId(event.target.value)}
-                  className="app-select pl-10"
-                >
-                  {filteredUsers.length === 0 && (
-                    <option value="">Aucun destinataire</option>
-                  )}
-                  {filteredUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.firstName} {user.lastName} ({user.role})
-                    </option>
-                  ))}
-                </select>
+              <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-3">
+                {filteredUsers.length === 0 && (
+                  <p className="text-sm text-slate-500">Aucun destinataire disponible.</p>
+                )}
+                {filteredUsers.map((user) => {
+                  const checked = receiverIds.includes(user.id);
+
+                  return (
+                    <label
+                      key={user.id}
+                      className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-2 transition ${
+                        checked
+                          ? "border-sky-300 bg-sky-50"
+                          : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="message-preview-avatar">
+                          {user.firstName.charAt(0)}
+                          {user.lastName.charAt(0)}
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {user.firstName} {user.lastName}
+                          </p>
+                          <p className="text-xs uppercase tracking-[0.12em] text-slate-500">
+                            {user.role}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${checked ? "border-sky-400 bg-sky-500 text-white" : "border-slate-300 bg-white text-transparent"}`}>
+                        <FiCheckSquare className="text-sm" />
+                      </span>
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={checked}
+                        onChange={() => toggleRecipient(user.id)}
+                      />
+                    </label>
+                  );
+                })}
               </div>
               <p className="field-help">
-                Choisissez le collaborateur concerné par l&apos;échange.
+                Choisissez un ou plusieurs collaborateurs concernes par l&apos;échange.
               </p>
             </div>
 
@@ -355,11 +411,11 @@ export default function MessagesPanel({
               </p>
               <button
                 type="submit"
-                disabled={loading || users.length === 0 || !content.trim()}
+                disabled={loading || users.length === 0 || receiverIds.length === 0 || !content.trim()}
                 className="app-btn-primary min-w-[180px]"
               >
                 <FiSend className="text-sm" />
-                {loading ? "Envoi..." : "Envoyer l'email"}
+                {loading ? "Envoi..." : receiverIds.length > 1 ? "Envoyer les emails" : "Envoyer l'email"}
               </button>
             </div>
           </form>
@@ -374,39 +430,43 @@ export default function MessagesPanel({
                 <FiInbox className="text-xl" />
               </div>
               <h3 className="mt-4 text-lg font-bold text-slate-900">
-                Aucun email envoye pour le moment
+                {isAgent ? "Aucun message recu pour le moment" : "Aucun message pour le moment"}
               </h3>
               <p className="mt-2 text-sm text-slate-500">
-                Commencez par envoyer un email pour alimenter l&apos;historique
-                des communications.
+                {isAgent
+                  ? "Les messages qui vous sont envoyes apparaitront ici. Les agents peuvent les consulter sans y repondre."
+                  : "Commencez par envoyer un email pour alimenter l&apos;historique des communications."}
               </p>
             </div>
           ) : (
             <>
               {paginatedMessages.map((message) => (
+                (() => {
+                  const isOutgoing = message.sender.id === currentUserId;
+                  const counterpart = isOutgoing ? message.receiver : message.sender;
+
+                  return (
                 <article
                   key={message.id}
-                  className="message-thread-card message-thread-card-out"
+                  className={`message-thread-card ${isOutgoing ? "message-thread-card-out" : "message-thread-card-in"}`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <span className="message-thread-avatar message-thread-avatar-out">
-                        {message.receiver.firstName.charAt(0)}
-                        {message.receiver.lastName.charAt(0)}
+                      <span className={`message-thread-avatar ${isOutgoing ? "message-thread-avatar-out" : "message-thread-avatar-in"}`}>
+                        {counterpart.firstName.charAt(0)}
+                        {counterpart.lastName.charAt(0)}
                       </span>
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-bold text-slate-900">
-                            {message.receiver.firstName}{" "}
-                            {message.receiver.lastName}
+                            {counterpart.firstName} {counterpart.lastName}
                           </p>
-                          <Badge label="email envoye" variant="progress" />
+                          <Badge label={isOutgoing ? "email envoye" : "message recu"} variant={isOutgoing ? "progress" : "pending"} />
                         </div>
                         <p className="mt-1 text-xs font-medium text-slate-500">
-                          De {message.sender.firstName}{" "}
-                          {message.sender.lastName} a{" "}
-                          {message.receiver.firstName}{" "}
-                          {message.receiver.lastName}
+                          {isOutgoing
+                            ? `De ${message.sender.firstName} ${message.sender.lastName} a ${message.receiver.firstName} ${message.receiver.lastName}`
+                            : `De ${message.sender.firstName} ${message.sender.lastName} vers vous`}
                         </p>
                       </div>
                     </div>
@@ -442,6 +502,8 @@ export default function MessagesPanel({
                     </div>
                   </div>
                 </article>
+                  );
+                })()
               ))}
 
               <div className="message-pagination">

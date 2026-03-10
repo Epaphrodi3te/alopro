@@ -1,15 +1,11 @@
 import Link from "next/link";
 import { FiArrowLeft } from "react-icons/fi";
-import { Role } from "@prisma/client";
 import { redirect } from "next/navigation";
 
 import MessagesPanel from "@/components/messages/MessagesPanel";
 import { requireUser } from "@/lib/auth";
+import { canSendDirectEmail } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
-
-function canSendDirectEmail(role: Role) {
-  return role === "admin" || role === "manager";
-}
 
 export default async function NewMessagePage() {
   const user = await requireUser();
@@ -21,6 +17,7 @@ export default async function NewMessagePage() {
   const users = await prisma.user.findMany({
     where: {
       id: { not: user.id },
+      role: user.role === "agent" ? { in: ["admin", "manager"] } : undefined,
     },
     orderBy: { createdAt: "desc" },
     select: {
@@ -37,7 +34,9 @@ export default async function NewMessagePage() {
         <div>
           <h1 className="page-title text-slate-900">Nouveau message</h1>
           <p className="page-subtitle">
-            Selectionnez un destinataire puis redigez un email professionnel.
+            {user.role === "agent"
+              ? "Selectionnez un ou plusieurs administrateurs ou managers puis redigez votre message."
+              : "Selectionnez un ou plusieurs destinataires puis redigez un email professionnel."}
           </p>
         </div>
         <Link href="/messages" className="app-btn-soft">
@@ -52,6 +51,8 @@ export default async function NewMessagePage() {
         role={user.role}
         view="create"
         redirectAfterCreate="/messages"
+        currentUserId={user.id}
+        currentUserRole={user.role}
       />
     </div>
   );
