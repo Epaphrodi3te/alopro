@@ -1,6 +1,7 @@
 import { FiBell, FiLock, FiMail, FiPhone, FiShield, FiUser } from "react-icons/fi";
 
 import Badge from "@/components/ui/Badge";
+import PasswordSettingsForm from "@/components/settings/PasswordSettingsForm";
 import { requireUser } from "@/lib/auth";
 import { getDepartmentLabel } from "@/lib/constants";
 import { getRoleLabel } from "@/lib/navigation";
@@ -10,33 +11,30 @@ export default async function SettingsPage() {
   const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-[linear-gradient(150deg,#ffffff,#eef2ff_55%,#f8fafc)] p-6 shadow-sm">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-indigo-200/55 blur-3xl" />
-        <div className="pointer-events-none absolute -left-16 bottom-[-4rem] h-44 w-44 rounded-full bg-sky-100/65 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-2xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-indigo-700">
-              <FiShield className="text-[11px]" />
-              Parametres
-            </p>
-            <h1 className="mt-3 page-title text-slate-900">Compte et securite</h1>
-            <p className="page-subtitle">
-              Retrouvez vos informations personnelles, votre role et les points de securite de votre espace.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Badge
-                label={getRoleLabel(user.role)}
-                variant={user.role === "admin" ? "admin" : user.role === "manager" ? "manager" : "agent"}
-              />
-              <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                {getDepartmentLabel(user.department)}
-              </span>
-            </div>
-          </div>
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-900 text-xl font-extrabold text-white shadow-sm">
-            {initials}
-          </div>
+    <div className="space-y-5">
+      <section className="workspace-page-header">
+        <div>
+          <h1 className="page-title text-slate-900">Parametres</h1>
+          <p className="page-subtitle">Informations de votre compte et bonnes pratiques de securite.</p>
+        </div>
+      </section>
+
+      <section className="app-card p-5">
+        <h2 className="text-lg font-bold text-slate-900">Profil</h2>
+
+        <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+          <p><span className="font-semibold">Nom:</span> {user.firstName} {user.lastName}</p>
+          <p><span className="font-semibold">Email:</span> {user.email}</p>
+          <p><span className="font-semibold">Telephone:</span> {user.phone ?? "-"}</p>
+          <p><span className="font-semibold">Departement:</span> {getDepartmentLabel(user.department)}</p>
+          <p>
+            <span className="font-semibold">Role:</span>{" "}
+            <Badge
+              label={user.role}
+              variant={user.role === "admin" ? "admin" : user.role === "manager" ? "manager" : "agent"}
+            />
+          </p>
+          <p><span className="font-semibold">Cree le:</span> {new Date(user.createdAt).toLocaleDateString()}</p>
         </div>
       </section>
 
@@ -108,6 +106,8 @@ export default async function SettingsPage() {
           </article>
         </aside>
       </section>
+
+      <PasswordSettingsForm />
     </div>
   );
 }

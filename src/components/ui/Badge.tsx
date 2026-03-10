@@ -10,7 +10,7 @@ const variantStyles: Record<BadgeVariant, string> = {
   manager: "bg-sky-50 text-slate-700 ring-1 ring-sky-200",
   agent: "bg-teal-50 text-slate-700 ring-1 ring-teal-200",
   pending: "bg-slate-100 text-slate-700 ring-1 ring-slate-300",
-  progress: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200",
+  progress: "bg-green-200 text-gray-700 ring-1 ring-green-200",
   done: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
   high: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
   medium: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",

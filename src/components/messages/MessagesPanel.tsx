@@ -72,7 +72,10 @@ export default function MessagesPanel({
       );
     });
   }, [receiverQuery, users]);
-  const totalPages = Math.max(1, Math.ceil(sortedMessages.length / itemsPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedMessages.length / itemsPerPage),
+  );
   const paginatedMessages = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return sortedMessages.slice(start, start + itemsPerPage);
@@ -184,9 +187,7 @@ export default function MessagesPanel({
                   </span>
                   <div>
                     <p className="message-stat-value">{filteredUsers.length}</p>
-                    <p className="message-stat-label">
-                      profils trouves
-                    </p>
+                    <p className="message-stat-label">profils trouves</p>
                   </div>
                 </div>
               </div>
@@ -356,13 +357,16 @@ export default function MessagesPanel({
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-bold text-slate-900">
-                            {message.receiver.firstName} {message.receiver.lastName}
+                            {message.receiver.firstName}{" "}
+                            {message.receiver.lastName}
                           </p>
                           <Badge label="email envoye" variant="progress" />
                         </div>
                         <p className="mt-1 text-xs font-medium text-slate-500">
-                          De {message.sender.firstName} {message.sender.lastName} a{" "}
-                          {message.receiver.firstName} {message.receiver.lastName}
+                          De {message.sender.firstName}{" "}
+                          {message.sender.lastName} a{" "}
+                          {message.receiver.firstName}{" "}
+                          {message.receiver.lastName}
                         </p>
                       </div>
                     </div>
@@ -373,12 +377,13 @@ export default function MessagesPanel({
 
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                     <p className="text-sm text-slate-500">
-                      Le contenu est masque ici pour garder un historique plus propre.
+                      Le contenu est masque ici pour garder un historique plus
+                      propre.
                     </p>
                     <button
                       type="button"
                       onClick={() => openMessagePreview(message)}
-                      className="app-btn-soft"
+                      className="border border-gray-200 hover:bg-slate-200 inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium"
                     >
                       <FiEye className="text-sm" />
                       Voir le message
@@ -394,7 +399,9 @@ export default function MessagesPanel({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
                     disabled={currentPage === 1}
                     className="app-btn-soft"
                   >

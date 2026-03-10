@@ -33,9 +33,15 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+<<<<<<< HEAD
 # local sqlite database
 prisma/*.db
 prisma/*.db-journal
+=======
+# local database
+prisma/dev.db
+prisma/dev.db-*
+>>>>>>> aeca2954f6978884f7a3003c7b8382efab946b35
 
 # vercel
 .vercel

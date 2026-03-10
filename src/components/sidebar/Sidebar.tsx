@@ -17,6 +17,7 @@ import {
   FiX,
 } from "react-icons/fi";
 
+import BrandMark from "@/components/brand/BrandMark";
 import { getMenuByRole, getRoleLabel, NavNotificationCounts } from "@/lib/navigation";
 
 type SidebarProps = {
