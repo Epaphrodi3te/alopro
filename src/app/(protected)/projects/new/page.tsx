@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FiArrowLeft } from "react-icons/fi";
+import { Prisma } from "@prisma/client";
 
 import ProjectsPanel from "@/components/projects/ProjectsPanel";
 import { requireUser } from "@/lib/auth";
@@ -8,10 +9,20 @@ import prisma from "@/lib/prisma";
 export default async function NewProjectPage() {
   const user = await requireUser();
 
+  let assigneeWhere: Prisma.UserWhereInput | null = null;
+
+  if (user.role === "admin") {
+    assigneeWhere = { role: { in: ["manager", "agent"] } };
+  }
+
+  if (user.role === "manager") {
+    assigneeWhere = { role: "agent" };
+  }
+
   const assignees =
-    user.role === "admin"
+    assigneeWhere
       ? await prisma.user.findMany({
-          where: { role: { in: ["manager", "agent"] } },
+          where: assigneeWhere,
           select: {
             id: true,
             firstName: true,
@@ -40,7 +51,6 @@ export default async function NewProjectPage() {
       <ProjectsPanel
         projects={[]}
         role={user.role}
-        currentUserId={user.id}
         assignees={assignees}
         view="create"
         redirectAfterCreate="/projects"

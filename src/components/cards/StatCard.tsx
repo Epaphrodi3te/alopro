@@ -4,29 +4,34 @@ type StatCardProps = {
   label: string;
   value: number | string;
   icon?: IconType;
-  accent?: "blue" | "emerald" | "amber" | "slate";
+  accent?: "indigo" | "emerald" | "amber" | "violet";
 };
 
-const accentClasses: Record<NonNullable<StatCardProps["accent"]>, string> = {
-  blue: "from-blue-600 to-cyan-500",
-  emerald: "from-emerald-600 to-teal-500",
-  amber: "from-amber-500 to-orange-500",
-  slate: "from-slate-700 to-slate-500",
+const accentStyles: Record<NonNullable<StatCardProps["accent"]>, string> = {
+  indigo: "from-indigo-50 to-white border-indigo-100 text-indigo-700",
+  emerald: "from-emerald-50 to-white border-emerald-100 text-emerald-700",
+  amber: "from-amber-50 to-white border-amber-100 text-amber-700",
+  violet: "from-violet-50 to-white border-violet-100 text-violet-700",
 };
 
-export default function StatCard({ label, value, icon: Icon, accent = "slate" }: StatCardProps) {
+export default function StatCard({ label, value, icon: Icon, accent = "indigo" }: StatCardProps) {
+  const accentClass = accentStyles[accent];
+
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${accentClasses[accent]}`} />
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-slate-600">{label}</p>
+    <article className={`relative overflow-hidden rounded-2xl border bg-[linear-gradient(155deg,#ffffff,#f8fafc_78%)] p-5 shadow-sm ${accentClass}`}>
+      <div className="pointer-events-none absolute -right-10 -top-12 h-28 w-28 rounded-full bg-white/80 blur-2xl" />
+      <div className="relative flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
+          <p className="mt-2 text-xs text-slate-500">Mise a jour instantanee</p>
+        </div>
         {Icon && (
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/80 bg-white/70">
             <Icon className="text-base" />
           </span>
         )}
       </div>
-      <p className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">{value}</p>
     </article>
   );
 }

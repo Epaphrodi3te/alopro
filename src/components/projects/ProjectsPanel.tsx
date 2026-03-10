@@ -1,21 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { Role } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { FiEdit2, FiPlusCircle, FiTrash2 } from "react-icons/fi";
-import Swal from "sweetalert2";
+import { FiCalendar, FiEye, FiFolder, FiPlusCircle, FiTrendingUp, FiUser } from "react-icons/fi";
 
-import DataTable from "@/components/tables/DataTable";
-import Badge from "@/components/ui/Badge";
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
-import { escapeHtml } from "@/lib/html";
 import { ProjectItem, UserLight } from "@/lib/types";
 
 type ProjectsPanelProps = {
   projects: ProjectItem[];
   role: Role;
-  currentUserId: string;
   assignees: UserLight[];
   view?: "all" | "list" | "create";
   redirectAfterCreate?: string;
@@ -29,22 +25,17 @@ const initialForm = {
   assignedToId: "",
 };
 
-function statusBadge(status: "pending" | "in_progress" | "completed") {
-  if (status === "pending") {
-    return <Badge label="pending" variant="pending" />;
+function formatDate(value: Date | null) {
+  if (!value) {
+    return "-";
   }
 
-  if (status === "in_progress") {
-    return <Badge label="in progress" variant="progress" />;
-  }
-
-  return <Badge label="completed" variant="done" />;
+  return new Date(value).toLocaleDateString();
 }
 
 export default function ProjectsPanel({
   projects,
   role,
-  currentUserId,
   assignees,
   view = "all",
   redirectAfterCreate,
@@ -71,7 +62,7 @@ export default function ProjectsPanel({
     [projects],
   );
 
-  const canAssignProject = role === "admin";
+  const canAssignProject = role === "admin" || role === "manager";
 
   const submitCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -106,167 +97,6 @@ export default function ProjectsPanel({
       await showError("Erreur reseau", "Impossible de creer le projet.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const editProject = async (project: ProjectItem) => {
-    const canEdit = role === "admin" || (role === "manager" && project.createdById === currentUserId);
-    if (!canEdit) {
-      await showError("Action refusee", "Vous ne pouvez pas modifier ce projet.");
-      return;
-    }
-
-    const assigneeOptions = assignees
-      .map(
-        (user) =>
-          `<option value="${user.id}" ${project.assignedTo?.id === user.id ? "selected" : ""}>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)} (${escapeHtml(user.role)})</option>`,
-      )
-      .join("");
-
-    const result = await Swal.fire({
-      title: "Modifier projet",
-      html: `
-<<<<<<< HEAD
-        <input id="swal-title" class="swal2-input" placeholder="Titre" value="${escapeHtml(project.title)}">
-        <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${escapeHtml(project.description)}</textarea>
-        <input id="swal-deadline" type="date" class="swal2-input" value="${
-          project.deadline ? new Date(project.deadline).toISOString().slice(0, 10) : ""
-        }">
-        <select id="swal-status" class="swal2-input">
-          <option value="pending" ${project.status === "pending" ? "selected" : ""}>pending</option>
-          <option value="in_progress" ${project.status === "in_progress" ? "selected" : ""}>in_progress</option>
-          <option value="completed" ${project.status === "completed" ? "selected" : ""}>completed</option>
-        </select>
-        ${
-          canAssignProject
-            ? `<select id="swal-assignee" class="swal2-input"><option value="">Aucune assignation</option>${assigneeOptions}</select>`
-            : ""
-        }
-=======
-        <div class="swal-pro-form">
-          <div class="swal-pro-row">
-            <div class="swal-pro-field">
-              <label class="swal-pro-label" for="swal-title">Titre</label>
-              <input id="swal-title" class="swal2-input" placeholder="Titre du projet" value="${escapeHtml(project.title)}">
-            </div>
-            <div class="swal-pro-field">
-              <label class="swal-pro-label" for="swal-status">Statut</label>
-              <select id="swal-status" class="swal2-select">
-                <option value="pending" ${project.status === "pending" ? "selected" : ""}>pending</option>
-                <option value="in_progress" ${project.status === "in_progress" ? "selected" : ""}>in_progress</option>
-                <option value="completed" ${project.status === "completed" ? "selected" : ""}>completed</option>
-              </select>
-            </div>
-          </div>
-          <div class="swal-pro-field">
-            <label class="swal-pro-label" for="swal-description">Description</label>
-            <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${escapeHtml(project.description)}</textarea>
-          </div>
-          ${
-            canAssignProject
-              ? `<div class="swal-pro-field">
-                  <label class="swal-pro-label" for="swal-assignee">Assigner a</label>
-                  <select id="swal-assignee" class="swal2-select"><option value="">Aucune assignation</option>${assigneeOptions}</select>
-                </div>`
-              : ""
-          }
-        </div>
->>>>>>> dbc121354ca890bf4e1d48224a281bb620f14915
-      `,
-      showCancelButton: true,
-      confirmButtonText: "Mettre a jour",
-      cancelButtonText: "Annuler",
-      buttonsStyling: false,
-      customClass: {
-        popup: "swal-pro-modal",
-        title: "swal-pro-title",
-        htmlContainer: "swal-pro-html",
-        confirmButton: "swal-pro-confirm",
-        cancelButton: "swal-pro-cancel",
-      },
-      preConfirm: () => {
-        const title = (document.getElementById("swal-title") as HTMLInputElement)?.value;
-        const description = (document.getElementById("swal-description") as HTMLTextAreaElement)?.value;
-        const deadline = (document.getElementById("swal-deadline") as HTMLInputElement)?.value;
-        const status = (document.getElementById("swal-status") as HTMLSelectElement)?.value;
-        const assignedToId = canAssignProject
-          ? (document.getElementById("swal-assignee") as HTMLSelectElement)?.value
-          : undefined;
-
-        if (!title || !description || !status) {
-          Swal.showValidationMessage("Titre, description et statut sont obligatoires.");
-          return;
-        }
-
-        return {
-          title,
-          description,
-          deadline,
-          status,
-          assignedToId,
-        };
-      },
-    });
-
-    if (!result.isConfirmed || !result.value) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(result.value),
-      });
-
-      if (!response.ok) {
-        await showError("Modification impossible", await extractApiError(response));
-        return;
-      }
-
-      await showSuccess("Projet modifie");
-      router.refresh();
-    } catch {
-      await showError("Erreur reseau", "Impossible de modifier le projet.");
-    }
-  };
-
-  const deleteProject = async (project: ProjectItem) => {
-    if (role !== "admin") {
-      await showError("Action refusee", "Seul l'admin peut supprimer un projet.");
-      return;
-    }
-
-    const confirm = await Swal.fire({
-      icon: "warning",
-      title: "Supprimer projet",
-      text: `Confirmer la suppression du projet "${project.title}" ?`,
-      showCancelButton: true,
-      confirmButtonText: "Supprimer",
-      cancelButtonText: "Annuler",
-      confirmButtonColor: "#b91c1c",
-    });
-
-    if (!confirm.isConfirmed) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        await showError("Suppression impossible", await extractApiError(response));
-        return;
-      }
-
-      await showSuccess("Projet supprime");
-      router.refresh();
-    } catch {
-      await showError("Erreur reseau", "Impossible de supprimer le projet.");
     }
   };
 
@@ -358,62 +188,80 @@ export default function ProjectsPanel({
       )}
 
       {showList && (
-        <section>
-          <DataTable
-            columns={["Titre", "Date limite", "Statut", "Cree par", "Assigne a", "Taches", "Date", "Actions"]}
-            emptyLabel="Aucun projet trouve."
-            hasRows={sortedProjects.length > 0}
-          >
-            {sortedProjects.map((project) => {
-              const canEdit = role === "admin" || (role === "manager" && project.createdById === currentUserId);
-              const canDelete = role === "admin";
+        <section className="space-y-3">
+          {sortedProjects.length === 0 && (
+            <article className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
+              Aucun projet trouve.
+            </article>
+          )}
 
-              return (
-                <tr key={project.id} className="border-t border-slate-200">
-                  <td data-label="Titre" className="px-4 py-3">
-                    <p className="font-semibold text-slate-900">{project.title}</p>
-                    <p className="max-w-xs text-xs text-slate-500">{project.description}</p>
-                  </td>
-                  <td data-label="Date limite" className="px-4 py-3">
-                    {project.deadline ? new Date(project.deadline).toLocaleDateString() : "-"}
-                  </td>
-                  <td data-label="Statut" className="px-4 py-3">{statusBadge(project.status)}</td>
-                  <td data-label="Cree par" className="px-4 py-3">
-                    {project.createdBy.firstName} {project.createdBy.lastName}
-                  </td>
-                  <td data-label="Assigne a" className="px-4 py-3">
-                    {project.assignedTo
-                      ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}`
-                      : "-"}
-                  </td>
-                  <td data-label="Taches" className="px-4 py-3">{project._count.tasks}</td>
-                  <td data-label="Date" className="px-4 py-3">{new Date(project.createdAt).toLocaleDateString()}</td>
-                  <td data-label="Actions" className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => editProject(project)}
-                        disabled={!canEdit}
-                        className="app-btn-soft"
-                      >
-                        <FiEdit2 className="text-xs" />
-                        Modifier
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteProject(project)}
-                        disabled={!canDelete}
-                        className="app-btn-danger"
-                      >
-                        <FiTrash2 className="text-xs" />
-                        Supprimer
-                      </button>
+          {sortedProjects.map((project) => {
+            const totalTasks = project.tasks?.length ?? project._count.tasks ?? 0;
+            const doneTasks = project.tasks
+              ? project.tasks.filter((task) => task.status === "done").length
+              : project.status === "completed" && totalTasks > 0
+                ? totalTasks
+                : 0;
+            const progressPercent = totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
+
+            return (
+              <article
+                key={project.id}
+                className="group rounded-2xl border border-slate-200 bg-[linear-gradient(165deg,#ffffff,#f8fafc_85%)] p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-700">
+                      <FiFolder />
+                      Projet
                     </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </DataTable>
+                    <p className="mt-2 truncate text-base font-semibold text-slate-900">{project.title}</p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/projects/${project.id}`} className="app-btn-primary">
+                      <FiEye className="text-xs" />
+                      Voir details
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                    <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      <FiUser />
+                      Assigne a
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">
+                      {project.assignedTo ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}` : "-"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                    <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      <FiCalendar />
+                      Date fin
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">{formatDate(project.deadline)}</p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                    <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      <FiTrendingUp />
+                      Progression
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">{progressPercent}%</p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="h-full rounded-full bg-indigo-500"
+                        style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </section>
       )}
     </div>

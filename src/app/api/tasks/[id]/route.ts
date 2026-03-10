@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
 import { z } from "zod";
 
 import { apiError, parseDate } from "@/lib/api";
 import { TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from "@/lib/constants";
 import { requireApiUser } from "@/lib/auth";
 import { canAssignTask, canDeleteTask, canEditTask } from "@/lib/permissions";
+import { canUserViewTask } from "@/lib/task-visibility";
 import prisma from "@/lib/prisma";
 
 const updateTaskSchema = z.object({
@@ -14,7 +16,22 @@ const updateTaskSchema = z.object({
   status: z.enum(TASK_STATUS_OPTIONS).optional(),
   deadline: z.string().optional().or(z.literal("")),
   assignedToId: z.string().cuid().optional().nullable().or(z.literal("")),
+  received: z.boolean().optional(),
+  deadlineValidated: z.boolean().optional(),
+  progressPercent: z.coerce.number().int().min(0).max(100).optional(),
 });
+
+function canAssignTaskToRole(actorRole: Role, assigneeRole: Role) {
+  if (actorRole === "admin") {
+    return assigneeRole === "manager" || assigneeRole === "agent";
+  }
+
+  if (actorRole === "manager") {
+    return assigneeRole === "agent";
+  }
+
+  return false;
+}
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -36,6 +53,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
           id: true,
           createdById: true,
           assignedToId: true,
+          createdBy: {
+            select: {
+              role: true,
+            },
+          },
         },
       },
     },
@@ -43,6 +65,25 @@ export async function PUT(request: NextRequest, { params }: Params) {
 
   if (!task) {
     return apiError("Tache introuvable.", 404);
+  }
+
+  if (
+    !canUserViewTask(
+      { id: current.id, role: current.role },
+      {
+        createdById: task.createdById,
+        assignedToId: task.assignedToId,
+        project: task.project
+          ? {
+              createdById: task.project.createdById,
+              assignedToId: task.project.assignedToId,
+              createdByRole: task.project.createdBy.role,
+            }
+          : null,
+      },
+    )
+  ) {
+    return apiError("Tache non accessible.", 403);
   }
 
   const managedByCurrentManager =
@@ -67,6 +108,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
       status?: (typeof TASK_STATUS_OPTIONS)[number];
       deadline?: Date | null;
       assignedToId?: string | null;
+      receivedAt?: Date | null;
+      deadlineValidatedAt?: Date | null;
+      progressPercent?: number;
     } = {};
 
     if (parsed.data.title) {
@@ -106,11 +150,67 @@ export async function PUT(request: NextRequest, { params }: Params) {
           return apiError("Utilisateur a assigner introuvable.", 404);
         }
 
-        if (assignee.role !== "agent") {
-          return apiError("Une tache doit etre assignee a un agent.", 400);
+        if (!canAssignTaskToRole(current.role, assignee.role)) {
+          return apiError("Role d'assignation non autorise pour cette tache.", 400);
         }
 
         data.assignedToId = assignee.id;
+      }
+
+      if (data.assignedToId !== task.assignedToId) {
+        data.receivedAt = null;
+        data.deadlineValidatedAt = null;
+        data.progressPercent = 0;
+      }
+    }
+
+    const wantsWorkflowUpdate =
+      parsed.data.received !== undefined ||
+      parsed.data.deadlineValidated !== undefined ||
+      parsed.data.progressPercent !== undefined;
+
+    if (wantsWorkflowUpdate && current.role !== "admin" && task.assignedToId !== current.id) {
+      return apiError("Seul l'utilisateur assigne peut confirmer la reception et la progression.", 403);
+    }
+
+    if (wantsWorkflowUpdate) {
+      const now = new Date();
+      const effectiveReceivedAt =
+        parsed.data.received === undefined ? task.receivedAt : parsed.data.received ? task.receivedAt ?? now : null;
+      const effectiveDeadlineValidatedAt =
+        parsed.data.deadlineValidated === undefined
+          ? task.deadlineValidatedAt
+          : parsed.data.deadlineValidated
+            ? task.deadlineValidatedAt ?? now
+            : null;
+
+      if (parsed.data.received !== undefined) {
+        data.receivedAt = effectiveReceivedAt;
+      }
+
+      if (parsed.data.deadlineValidated !== undefined) {
+        if (parsed.data.deadlineValidated && !effectiveReceivedAt) {
+          return apiError("La tache doit etre marquee comme recue avant de valider la date de fin.", 400);
+        }
+
+        data.deadlineValidatedAt = effectiveDeadlineValidatedAt;
+
+        if (!parsed.data.deadlineValidated && parsed.data.progressPercent === undefined) {
+          data.progressPercent = 0;
+        }
+      }
+
+      if (parsed.data.received === false) {
+        data.deadlineValidatedAt = null;
+        data.progressPercent = 0;
+      }
+
+      if (parsed.data.progressPercent !== undefined) {
+        if (parsed.data.progressPercent > 0 && !effectiveDeadlineValidatedAt) {
+          return apiError("Validez d'abord la date de fin avant de declarer une progression.", 400);
+        }
+
+        data.progressPercent = parsed.data.progressPercent;
       }
     }
 
@@ -162,9 +262,43 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   const { id } = await params;
 
-  const task = await prisma.task.findUnique({ where: { id } });
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: {
+      project: {
+        select: {
+          createdById: true,
+          assignedToId: true,
+          createdBy: {
+            select: {
+              role: true,
+            },
+          },
+        },
+      },
+    },
+  });
   if (!task) {
     return apiError("Tache introuvable.", 404);
+  }
+
+  if (
+    !canUserViewTask(
+      { id: current.id, role: current.role },
+      {
+        createdById: task.createdById,
+        assignedToId: task.assignedToId,
+        project: task.project
+          ? {
+              createdById: task.project.createdById,
+              assignedToId: task.project.assignedToId,
+              createdByRole: task.project.createdBy.role,
+            }
+          : null,
+      },
+    )
+  ) {
+    return apiError("Tache non accessible.", 403);
   }
 
   await prisma.task.delete({ where: { id } });

@@ -1,12 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { Role } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { FiEdit2, FiPlusCircle, FiTrash2 } from "react-icons/fi";
+import { FiCalendar, FiEdit2, FiEye, FiFolder, FiPlusCircle, FiTrash2, FiTrendingUp, FiUser } from "react-icons/fi";
 import Swal from "sweetalert2";
 
-import DataTable from "@/components/tables/DataTable";
 import Badge from "@/components/ui/Badge";
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
 import { escapeHtml } from "@/lib/html";
@@ -60,6 +60,14 @@ function priorityBadge(priority: "low" | "medium" | "high") {
   return <Badge label="low" variant="low" />;
 }
 
+function formatDate(value: Date | null) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Date(value).toLocaleDateString();
+}
+
 export default function TasksPanel({
   tasks,
   role,
@@ -80,7 +88,17 @@ export default function TasksPanel({
   const showList = view !== "create";
 
   const sortedTasks = useMemo(
-    () => [...tasks].sort((a, b) => Number(new Date(b.createdAt)) - Number(new Date(a.createdAt))),
+    () =>
+      [...tasks].sort((a, b) => {
+        const aDeadline = a.deadline ? new Date(a.deadline).getTime() : Number.POSITIVE_INFINITY;
+        const bDeadline = b.deadline ? new Date(b.deadline).getTime() : Number.POSITIVE_INFINITY;
+
+        if (aDeadline !== bDeadline) {
+          return aDeadline - bDeadline;
+        }
+
+        return Number(new Date(b.createdAt)) - Number(new Date(a.createdAt));
+      }),
     [tasks],
   );
 
@@ -108,10 +126,10 @@ export default function TasksPanel({
         return;
       }
 
-      setForm((prev) => ({
+      setForm({
         ...initialForm,
         projectId: projects[0]?.id ?? "",
-      }));
+      });
       await showSuccess("Tache creee");
 
       if (redirectAfterCreate) {
@@ -130,7 +148,7 @@ export default function TasksPanel({
     const agentOptions = agents
       .map(
         (user) =>
-          `<option value="${user.id}" ${task.assignedTo?.id === user.id ? "selected" : ""}>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</option>`,
+          `<option value="${user.id}" ${task.assignedTo?.id === user.id ? "selected" : ""}>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)} (${escapeHtml(user.role)})</option>`,
       )
       .join("");
 
@@ -380,7 +398,7 @@ export default function TasksPanel({
                   <option value="">Aucune assignation</option>
                   {agents.map((agent) => (
                     <option key={agent.id} value={agent.id}>
-                      {agent.firstName} {agent.lastName}
+                      {agent.firstName} {agent.lastName} ({agent.role})
                     </option>
                   ))}
                 </select>
@@ -400,61 +418,92 @@ export default function TasksPanel({
       )}
 
       {showList && (
-        <section>
-          <DataTable
-            columns={[
-              "Tache",
-              "Projet",
-              "Priorite",
-              "Statut",
-              "Assignee",
-              "Deadline",
-              "Date",
-              "Actions",
-            ]}
-            emptyLabel="Aucune tache trouvee."
-            hasRows={sortedTasks.length > 0}
-          >
-            {sortedTasks.map((task) => (
-              <tr key={task.id} className="border-t border-slate-200">
-                <td data-label="Tache" className="px-4 py-3">
-                  <p className="font-semibold text-slate-900">{task.title}</p>
-                  <p className="max-w-xs text-xs text-slate-500">{task.description}</p>
-                </td>
-                <td data-label="Projet" className="px-4 py-3">{task.project?.title ?? "Sans projet"}</td>
-                <td data-label="Priorite" className="px-4 py-3">{priorityBadge(task.priority)}</td>
-                <td data-label="Statut" className="px-4 py-3">{statusBadge(task.status)}</td>
-                <td data-label="Assignee" className="px-4 py-3">
-                  {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "-"}
-                </td>
-                <td data-label="Deadline" className="px-4 py-3">
-                  {task.deadline ? new Date(task.deadline).toLocaleDateString() : "-"}
-                </td>
-                <td data-label="Date" className="px-4 py-3">{new Date(task.createdAt).toLocaleDateString()}</td>
-                <td data-label="Actions" className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => editTask(task)}
-                      className="app-btn-soft"
-                    >
-                      <FiEdit2 className="text-xs" />
-                      Modifier
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteTask(task)}
-                      disabled={role !== "admin"}
-                      className="app-btn-danger"
-                    >
-                      <FiTrash2 className="text-xs" />
-                      Supprimer
-                    </button>
+        <section className="space-y-3">
+          {sortedTasks.length === 0 && (
+            <article className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
+              Aucune tache trouvee.
+            </article>
+          )}
+
+          {sortedTasks.map((task) => (
+            <article
+              key={task.id}
+              className="group rounded-2xl border border-slate-200 bg-[linear-gradient(165deg,#ffffff,#f8fafc_85%)] p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-700">
+                    <FiFolder />
+                    Tache
                   </div>
-                </td>
-              </tr>
-            ))}
-          </DataTable>
+                  <p className="mt-2 truncate text-base font-semibold text-slate-900">{task.title}</p>
+                  <p className="mt-1 text-xs font-medium text-slate-500">Projet: {task.project?.title ?? "Sans projet"}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {statusBadge(task.status)}
+                    {priorityBadge(task.priority)}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/tasks/${task.id}`} className="app-btn-primary">
+                    <FiEye className="text-xs" />
+                    Voir details
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => editTask(task)}
+                    className="app-btn-soft"
+                  >
+                    <FiEdit2 className="text-xs" />
+                    Modifier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteTask(task)}
+                    disabled={role !== "admin"}
+                    className="app-btn-danger"
+                  >
+                    <FiTrash2 className="text-xs" />
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                  <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <FiUser />
+                    Assigne a
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">
+                    {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "-"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                  <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <FiCalendar />
+                    Date fin
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">{formatDate(task.deadline)}</p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                  <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <FiTrendingUp />
+                    Progression
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">{task.progressPercent}%</p>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className="h-full rounded-full bg-indigo-500"
+                      style={{ width: `${Math.max(0, Math.min(100, task.progressPercent))}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
         </section>
       )}
     </div>

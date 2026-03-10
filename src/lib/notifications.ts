@@ -1,6 +1,8 @@
 import { Prisma, Role } from "@prisma/client";
 
 import { NavNotificationCounts } from "@/lib/navigation";
+import { getProjectVisibilityWhereForUser } from "@/lib/project-visibility";
+import { getTaskVisibilityWhereForUser } from "@/lib/task-visibility";
 import prisma from "@/lib/prisma";
 
 type NotificationUser = {
@@ -18,28 +20,14 @@ export type NotificationSeenAt = Partial<{
 const EPOCH = new Date(0);
 
 function buildScopeForRole(user: NotificationUser) {
-  let projectWhere: Prisma.ProjectWhereInput = {};
-  let taskWhere: Prisma.TaskWhereInput = {};
-
-  if (user.role === "manager") {
-    projectWhere = {
-      OR: [{ createdById: user.id }, { assignedToId: user.id }],
-    };
-
-    taskWhere = {
-      OR: [
-        { createdById: user.id },
-        { assignedToId: user.id },
-        { project: { createdById: user.id } },
-        { project: { assignedToId: user.id } },
-      ],
-    };
-  }
-
-  if (user.role === "agent") {
-    projectWhere = { assignedToId: user.id };
-    taskWhere = { assignedToId: user.id };
-  }
+  const projectWhere: Prisma.ProjectWhereInput = getProjectVisibilityWhereForUser({
+    id: user.id,
+    role: user.role,
+  });
+  const taskWhere: Prisma.TaskWhereInput = getTaskVisibilityWhereForUser({
+    id: user.id,
+    role: user.role,
+  });
 
   return { projectWhere, taskWhere };
 }

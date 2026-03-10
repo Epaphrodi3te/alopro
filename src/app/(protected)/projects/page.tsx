@@ -4,23 +4,25 @@ import { Prisma } from "@prisma/client";
 
 import ProjectsPanel from "@/components/projects/ProjectsPanel";
 import { requireUser } from "@/lib/auth";
+import { getProjectVisibilityWhereForUser } from "@/lib/project-visibility";
 import prisma from "@/lib/prisma";
 
 export default async function ProjectsPage() {
   const user = await requireUser();
 
-  let where: Prisma.ProjectWhereInput = {};
+  const where: Prisma.ProjectWhereInput = getProjectVisibilityWhereForUser({
+    id: user.id,
+    role: user.role,
+  });
 
-  if (user.role === "manager") {
-    where = {
-      OR: [{ createdById: user.id }, { assignedToId: user.id }],
-    };
+  let assigneeWhere: Prisma.UserWhereInput | null = null;
+
+  if (user.role === "admin") {
+    assigneeWhere = { role: { in: ["manager", "agent"] } };
   }
 
-  if (user.role === "agent") {
-    where = {
-      assignedToId: user.id,
-    };
+  if (user.role === "manager") {
+    assigneeWhere = { role: "agent" };
   }
 
   const [projects, assignees] = await Promise.all([
@@ -28,6 +30,11 @@ export default async function ProjectsPage() {
       where,
       orderBy: { createdAt: "desc" },
       include: {
+        tasks: {
+          select: {
+            status: true,
+          },
+        },
         createdBy: {
           select: {
             id: true,
@@ -49,9 +56,9 @@ export default async function ProjectsPage() {
         },
       },
     }),
-    user.role === "admin"
+    assigneeWhere
       ? prisma.user.findMany({
-          where: { role: { in: ["manager", "agent"] } },
+          where: assigneeWhere,
           select: {
             id: true,
             firstName: true,
@@ -69,7 +76,7 @@ export default async function ProjectsPage() {
         <div>
           <h1 className="page-title text-slate-900">Projets</h1>
           <p className="page-subtitle">
-            Tous les projets sont affiches par date limite de fin, du plus proche au plus lointain.
+            Vue epuree: seul le nom du projet est affiche ici. Utilisez Voir details pour consulter le reste.
           </p>
         </div>
         <Link href="/projects/new" className="app-btn-primary">
@@ -81,7 +88,6 @@ export default async function ProjectsPage() {
       <ProjectsPanel
         projects={projects}
         role={user.role}
-        currentUserId={user.id}
         assignees={assignees}
         view="list"
       />

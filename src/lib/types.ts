@@ -28,6 +28,9 @@ export type ProjectItem = {
   assignedToId?: string | null;
   createdBy: UserLight;
   assignedTo: UserLight | null;
+  tasks?: Array<{
+    status: TaskStatus;
+  }>;
   _count: {
     tasks: number;
   };
@@ -43,6 +46,9 @@ export type TaskItem = {
   priority: TaskPriority;
   status: TaskStatus;
   deadline: Date | null;
+  receivedAt: Date | null;
+  deadlineValidatedAt: Date | null;
+  progressPercent: number;
   createdAt: Date;
   project: {
     id: string;
