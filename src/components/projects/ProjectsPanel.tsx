@@ -1,54 +1,122 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { Role } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { FiEdit2, FiPlusCircle, FiTrash2 } from "react-icons/fi";
+import { FiCalendar, FiEye, FiFilter, FiFolder, FiPlusCircle, FiSearch, FiTrash2, FiTrendingUp, FiUser } from "react-icons/fi";
 import Swal from "sweetalert2";
 
-import DataTable from "@/components/tables/DataTable";
-import Badge from "@/components/ui/Badge";
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
-import { escapeHtml } from "@/lib/html";
 import { ProjectItem, UserLight } from "@/lib/types";
 
 type ProjectsPanelProps = {
   projects: ProjectItem[];
   role: Role;
-  currentUserId: string;
   assignees: UserLight[];
+  view?: "all" | "list" | "create";
+  redirectAfterCreate?: string;
 };
 
 const initialForm = {
   title: "",
   description: "",
+  commissionCfa: "",
+  deadline: "",
   status: "pending",
-  assignedToId: "",
+  assignedMemberIds: [] as string[],
+  reportRequired: false,
 };
 
-function statusBadge(status: "pending" | "in_progress" | "completed") {
-  if (status === "pending") {
-    return <Badge label="pending" variant="pending" />;
+function formatDate(value: Date | null) {
+  if (!value) {
+    return "-";
   }
 
-  if (status === "in_progress") {
-    return <Badge label="in progress" variant="progress" />;
-  }
-
-  return <Badge label="completed" variant="done" />;
+  return new Date(value).toLocaleDateString();
 }
 
-export default function ProjectsPanel({ projects, role, currentUserId, assignees }: ProjectsPanelProps) {
+function formatCommission(value: number | null) {
+  if (value === null || value === undefined) {
+    return "Aucune";
+  }
+
+  return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
+}
+
+export default function ProjectsPanel({
+  projects,
+  role,
+  assignees,
+  view = "all",
+  redirectAfterCreate,
+}: ProjectsPanelProps) {
   const router = useRouter();
   const [form, setForm] = useState(initialForm);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all");
+  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "assigned" | "unassigned">("all");
+  const [contentFilter, setContentFilter] = useState<"all" | "with_tasks" | "without_tasks">("all");
   const [loading, setLoading] = useState(false);
 
+  const showCreate = view !== "list";
+  const showList = view !== "create";
+
   const sortedProjects = useMemo(
-    () => [...projects].sort((a, b) => Number(new Date(b.createdAt)) - Number(new Date(a.createdAt))),
+    () =>
+      [...projects].sort((a, b) => {
+        const aDeadline = a.deadline ? new Date(a.deadline).getTime() : Number.POSITIVE_INFINITY;
+        const bDeadline = b.deadline ? new Date(b.deadline).getTime() : Number.POSITIVE_INFINITY;
+
+        if (aDeadline !== bDeadline) {
+          return aDeadline - bDeadline;
+        }
+
+        return Number(new Date(b.createdAt)) - Number(new Date(a.createdAt));
+      }),
     [projects],
   );
+  const filteredProjects = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
 
-  const canAssignProject = role === "admin";
+    return sortedProjects.filter((project) => {
+      if (statusFilter !== "all" && project.status !== statusFilter) {
+        return false;
+      }
+
+      const assignedMembers = project.memberships?.map((membership) => membership.user) ?? [];
+      const isAssigned = assignedMembers.length > 0 || Boolean(project.assignedToId);
+      if (assignmentFilter === "assigned" && !isAssigned) {
+        return false;
+      }
+
+      if (assignmentFilter === "unassigned" && isAssigned) {
+        return false;
+      }
+
+      const tasksCount = project._count?.tasks ?? 0;
+      if (contentFilter === "with_tasks" && tasksCount === 0) {
+        return false;
+      }
+
+      if (contentFilter === "without_tasks" && tasksCount > 0) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const assigneesLabel = assignedMembers.map((member) => `${member.firstName} ${member.lastName}`).join(" ");
+      const fallbackAssignee = project.assignedTo ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}` : "";
+      const haystack = [project.title, project.description, assigneesLabel, fallbackAssignee].join(" ").toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [assignmentFilter, contentFilter, searchQuery, sortedProjects, statusFilter]);
+
+  const canAssignProject = role === "admin" || role === "manager";
+  const canRequireReport = role === "admin";
+  const canDeleteProject = role === "admin";
 
   const submitCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -62,7 +130,8 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
         },
         body: JSON.stringify({
           ...form,
-          assignedToId: canAssignProject ? form.assignedToId : "",
+          assignedMemberIds: canAssignProject ? form.assignedMemberIds : [],
+          reportRequired: canRequireReport ? form.reportRequired : false,
         }),
       });
 
@@ -73,6 +142,11 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
 
       setForm(initialForm);
       await showSuccess("Projet cree");
+
+      if (redirectAfterCreate) {
+        router.push(redirectAfterCreate);
+      }
+
       router.refresh();
     } catch {
       await showError("Erreur reseau", "Impossible de creer le projet.");
@@ -81,107 +155,27 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
     }
   };
 
-  const editProject = async (project: ProjectItem) => {
-    const canEdit = role === "admin" || (role === "manager" && project.createdById === currentUserId);
-    if (!canEdit) {
-      await showError("Action refusee", "Vous ne pouvez pas modifier ce projet.");
-      return;
-    }
-
-    const assigneeOptions = assignees
-      .map(
-        (user) =>
-          `<option value="${user.id}" ${project.assignedTo?.id === user.id ? "selected" : ""}>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)} (${escapeHtml(user.role)})</option>`,
-      )
-      .join("");
-
-    const result = await Swal.fire({
-      title: "Modifier projet",
-      html: `
-        <input id="swal-title" class="swal2-input" placeholder="Titre" value="${escapeHtml(project.title)}">
-        <textarea id="swal-description" class="swal2-textarea" placeholder="Description">${escapeHtml(project.description)}</textarea>
-        <select id="swal-status" class="swal2-input">
-          <option value="pending" ${project.status === "pending" ? "selected" : ""}>pending</option>
-          <option value="in_progress" ${project.status === "in_progress" ? "selected" : ""}>in_progress</option>
-          <option value="completed" ${project.status === "completed" ? "selected" : ""}>completed</option>
-        </select>
-        ${
-          canAssignProject
-            ? `<select id="swal-assignee" class="swal2-input"><option value="">Aucune assignation</option>${assigneeOptions}</select>`
-            : ""
-        }
-      `,
-      showCancelButton: true,
-      confirmButtonText: "Mettre a jour",
-      preConfirm: () => {
-        const title = (document.getElementById("swal-title") as HTMLInputElement)?.value;
-        const description = (document.getElementById("swal-description") as HTMLTextAreaElement)?.value;
-        const status = (document.getElementById("swal-status") as HTMLSelectElement)?.value;
-        const assignedToId = canAssignProject
-          ? (document.getElementById("swal-assignee") as HTMLSelectElement)?.value
-          : undefined;
-
-        if (!title || !description || !status) {
-          Swal.showValidationMessage("Titre, description et statut sont obligatoires.");
-          return;
-        }
-
-        return {
-          title,
-          description,
-          status,
-          assignedToId,
-        };
-      },
-    });
-
-    if (!result.isConfirmed || !result.value) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(result.value),
-      });
-
-      if (!response.ok) {
-        await showError("Modification impossible", await extractApiError(response));
-        return;
-      }
-
-      await showSuccess("Projet modifie");
-      router.refresh();
-    } catch {
-      await showError("Erreur reseau", "Impossible de modifier le projet.");
-    }
-  };
-
-  const deleteProject = async (project: ProjectItem) => {
-    if (role !== "admin") {
+  const deleteProject = async (projectId: string) => {
+    if (!canDeleteProject) {
       await showError("Action refusee", "Seul l'admin peut supprimer un projet.");
       return;
     }
 
-    const confirm = await Swal.fire({
+    const result = await Swal.fire({
       icon: "warning",
       title: "Supprimer projet",
-      text: `Confirmer la suppression du projet "${project.title}" ?`,
+      text: "Le projet et ses donnees associees seront supprimes.",
       showCancelButton: true,
       confirmButtonText: "Supprimer",
       cancelButtonText: "Annuler",
-      confirmButtonColor: "#b91c1c",
     });
 
-    if (!confirm.isConfirmed) {
+    if (!result.isConfirmed) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/projects/${project.id}`, {
+      const response = await fetch(`/api/projects/${projectId}`, {
         method: "DELETE",
       });
 
@@ -199,132 +193,321 @@ export default function ProjectsPanel({ projects, role, currentUserId, assignees
 
   return (
     <div className="space-y-6">
-      <section className="app-card p-5">
-        <h2 className="text-lg font-bold text-slate-900">Creer un projet</h2>
+      {showCreate && (
+        <section className="app-card p-5">
+          <h2 className="text-lg font-bold text-slate-900">Creer un projet</h2>
 
-        <form className="form-grid mt-4 md:grid-cols-2" onSubmit={submitCreate}>
-          <div className="form-field">
-            <label htmlFor="project-title" className="field-label">Titre du projet</label>
-            <input
-              id="project-title"
-              required
-              value={form.title}
-              onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-              placeholder="Ex: Refonte site vitrine"
-              className="app-input"
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="project-status" className="field-label">Statut</label>
-            <select
-              id="project-status"
-              value={form.status}
-              onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
-              className="app-select"
-            >
-              <option value="pending">pending</option>
-              <option value="in_progress">in_progress</option>
-              <option value="completed">completed</option>
-            </select>
-          </div>
-
-          <div className="form-field md:col-span-2">
-            <label htmlFor="project-description" className="field-label">Description</label>
-            <textarea
-              id="project-description"
-              required
-              value={form.description}
-              onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="Objectifs, contexte et livrables..."
-              className="app-textarea"
-              rows={3}
-            />
-          </div>
-
-          {canAssignProject && (
+          <form className="form-grid mt-4 md:grid-cols-2" onSubmit={submitCreate}>
             <div className="form-field">
-              <label htmlFor="project-assignee" className="field-label">Assigner a</label>
+              <label htmlFor="project-title" className="field-label">Titre du projet</label>
+              <input
+                id="project-title"
+                required
+                value={form.title}
+                onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                placeholder="Ex: Refonte site vitrine"
+                className="app-input"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="project-status" className="field-label">Statut</label>
               <select
-                id="project-assignee"
-                value={form.assignedToId}
-                onChange={(event) => setForm((prev) => ({ ...prev, assignedToId: event.target.value }))}
+                id="project-status"
+                value={form.status}
+                onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
                 className="app-select"
               >
-                <option value="">Aucune assignation</option>
-                {assignees.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName} ({user.role})
-                  </option>
-                ))}
+                <option value="pending">pending</option>
+                <option value="in_progress">in_progress</option>
+                <option value="completed">completed</option>
               </select>
             </div>
+
+            <div className="form-field">
+              <label htmlFor="project-deadline" className="field-label">Date limite</label>
+              <input
+                id="project-deadline"
+                type="date"
+                value={form.deadline}
+                onChange={(event) => setForm((prev) => ({ ...prev, deadline: event.target.value }))}
+                className="app-input"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="project-commission" className="field-label">Commission (FCFA)</label>
+              <input
+                id="project-commission"
+                type="number"
+                min={0}
+                value={form.commissionCfa}
+                onChange={(event) => setForm((prev) => ({ ...prev, commissionCfa: event.target.value }))}
+                placeholder="Ex: 25000"
+                className="app-input"
+              />
+            </div>
+
+            <div className="form-field md:col-span-2">
+              <label htmlFor="project-description" className="field-label">Description</label>
+              <textarea
+                id="project-description"
+                required
+                value={form.description}
+                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="Objectifs, contexte et livrables..."
+                className="app-textarea"
+                rows={3}
+              />
+            </div>
+
+            {canAssignProject && (
+              <div className="form-field md:col-span-2">
+                <label className="field-label">Affecter a plusieurs personnes</label>
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {assignees.map((user) => {
+                      const checked = form.assignedMemberIds.includes(user.id);
+
+                      return (
+                        <label
+                          key={user.id}
+                          className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm ${
+                            checked ? "border-indigo-200 bg-indigo-50 text-indigo-800" : "border-slate-200 bg-white text-slate-700"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                assignedMemberIds: event.target.checked
+                                  ? [...prev.assignedMemberIds, user.id]
+                                  : prev.assignedMemberIds.filter((id) => id !== user.id),
+                              }))
+                            }
+                            className="h-4 w-4 rounded border-slate-300"
+                          />
+                          <span>
+                            {user.firstName} {user.lastName} ({user.role})
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Selectionnez une ou plusieurs personnes. Une tache reste assignee a une seule personne.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {canRequireReport && (
+              <label className="form-field md:col-span-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={form.reportRequired}
+                  onChange={(event) => setForm((prev) => ({ ...prev, reportRequired: event.target.checked }))}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                <span className="text-sm font-medium text-slate-700">Compte rendu final obligatoire</span>
+              </label>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="app-btn-primary w-full md:w-fit"
+            >
+              <FiPlusCircle className="text-sm" />
+              {loading ? "Creation..." : "Creer"}
+            </button>
+          </form>
+        </section>
+      )}
+
+      {showList && (
+        <section className="space-y-3">
+          <article className="app-card p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[240px] flex-1">
+                <label htmlFor="projects-search" className="field-label">Recherche rapide</label>
+                <div className="relative mt-1">
+                  <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    id="projects-search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Nom du projet, description, assigne..."
+                    className="app-input pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="min-w-[150px]">
+                <label htmlFor="projects-status-filter" className="field-label">Statut</label>
+                <select
+                  id="projects-status-filter"
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
+                  className="app-select mt-1"
+                >
+                  <option value="all">Tous</option>
+                  <option value="pending">pending</option>
+                  <option value="in_progress">in_progress</option>
+                  <option value="completed">completed</option>
+                </select>
+              </div>
+
+              <div className="min-w-[160px]">
+                <label htmlFor="projects-assignment-filter" className="field-label">Assignation</label>
+                <select
+                  id="projects-assignment-filter"
+                  value={assignmentFilter}
+                  onChange={(event) => setAssignmentFilter(event.target.value as typeof assignmentFilter)}
+                  className="app-select mt-1"
+                >
+                  <option value="all">Toutes</option>
+                  <option value="assigned">Assignes</option>
+                  <option value="unassigned">Non assignes</option>
+                </select>
+              </div>
+
+              <div className="min-w-[160px]">
+                <label htmlFor="projects-content-filter" className="field-label">Contenu</label>
+                <select
+                  id="projects-content-filter"
+                  value={contentFilter}
+                  onChange={(event) => setContentFilter(event.target.value as typeof contentFilter)}
+                  className="app-select mt-1"
+                >
+                  <option value="all">Tous</option>
+                  <option value="with_tasks">Avec taches</option>
+                  <option value="without_tasks">Sans tache</option>
+                </select>
+              </div>
+
+              {(searchQuery || statusFilter !== "all" || assignmentFilter !== "all" || contentFilter !== "all") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setStatusFilter("all");
+                    setAssignmentFilter("all");
+                    setContentFilter("all");
+                  }}
+                  className="app-btn-outline"
+                >
+                  <FiFilter className="text-sm" />
+                  Reinitialiser
+                </button>
+              )}
+            </div>
+
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+              {filteredProjects.length} resultat{filteredProjects.length > 1 ? "s" : ""} affiche{filteredProjects.length > 1 ? "s" : ""}
+            </p>
+          </article>
+
+          {sortedProjects.length === 0 && (
+            <article className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
+              Aucun projet trouve.
+            </article>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="app-btn-primary w-full md:w-fit"
-          >
-            <FiPlusCircle className="text-sm" />
-            {loading ? "Creation..." : "Creer"}
-          </button>
-        </form>
-      </section>
+          {sortedProjects.length > 0 && filteredProjects.length === 0 && (
+            <article className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
+              Aucun projet ne correspond aux filtres actuels.
+            </article>
+          )}
 
-      <section>
-        <DataTable
-          columns={["Titre", "Statut", "Cree par", "Assigne a", "Taches", "Date", "Actions"]}
-          emptyLabel="Aucun projet trouve."
-          hasRows={sortedProjects.length > 0}
-        >
-          {sortedProjects.map((project) => {
-            const canEdit = role === "admin" || (role === "manager" && project.createdById === currentUserId);
-            const canDelete = role === "admin";
+          {filteredProjects.map((project) => {
+            const progressPercent = Math.max(0, Math.min(100, project.progressPercent ?? 0));
+            const assignedMembers = project.memberships?.map((membership) => membership.user) ?? [];
+            const assignedMembersLabel =
+              assignedMembers.length > 0
+                ? assignedMembers.slice(0, 3).map((member) => `${member.firstName} ${member.lastName}`).join(", ")
+                : project.assignedTo
+                  ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}`
+                  : "-";
+            const additionalMembersCount = Math.max(0, assignedMembers.length - 3);
 
             return (
-              <tr key={project.id} className="border-t border-slate-200">
-                <td data-label="Titre" className="px-4 py-3">
-                  <p className="font-semibold text-slate-900">{project.title}</p>
-                  <p className="max-w-xs text-xs text-slate-500">{project.description}</p>
-                </td>
-                <td data-label="Statut" className="px-4 py-3">{statusBadge(project.status)}</td>
-                <td data-label="Cree par" className="px-4 py-3">
-                  {project.createdBy.firstName} {project.createdBy.lastName}
-                </td>
-                <td data-label="Assigne a" className="px-4 py-3">
-                  {project.assignedTo
-                    ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}`
-                    : "-"}
-                </td>
-                <td data-label="Taches" className="px-4 py-3">{project._count.tasks}</td>
-                <td data-label="Date" className="px-4 py-3">{new Date(project.createdAt).toLocaleDateString()}</td>
-                <td data-label="Actions" className="px-4 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => editProject(project)}
-                      disabled={!canEdit}
-                      className="app-btn-soft"
-                    >
-                      <FiEdit2 className="text-xs" />
-                      Modifier
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteProject(project)}
-                      disabled={!canDelete}
-                      className="app-btn-danger"
-                    >
-                      <FiTrash2 className="text-xs" />
-                      Supprimer
-                    </button>
+              <article
+                key={project.id}
+                className="group rounded-2xl border border-slate-200 bg-[linear-gradient(165deg,#ffffff,#f8fafc_85%)] p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-700">
+                      <FiFolder />
+                      Projet
+                    </div>
+                    <p className="mt-2 truncate text-base font-semibold text-slate-900">{project.title}</p>
                   </div>
-                </td>
-              </tr>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/projects/${project.id}`} className="app-btn-primary">
+                      <FiEye className="text-xs" />
+                      Voir details
+                    </Link>
+                    {canDeleteProject && (
+                      <button type="button" onClick={() => deleteProject(project.id)} className="app-btn-danger">
+                        <FiTrash2 className="text-xs" />
+                        Supprimer
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                  <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                    <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      <FiUser />
+                      Personnes assignees
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">
+                      {assignedMembers.length > 0 ? `${assignedMembers.length}` : project.assignedTo ? "1" : "0"}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {assignedMembersLabel}
+                      {additionalMembersCount > 0 ? ` +${additionalMembersCount}` : ""}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                    <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      <FiCalendar />
+                      Date fin
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">{formatDate(project.deadline)}</p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                    <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      <FiTrendingUp />
+                      Progression
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">{progressPercent}%</p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="h-full rounded-full bg-indigo-500"
+                        style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      Commission
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">{formatCommission(project.commissionCfa)}</p>
+                  </div>
+                </div>
+              </article>
             );
           })}
-        </DataTable>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

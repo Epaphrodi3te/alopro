@@ -1,5 +1,9 @@
+import Link from "next/link";
+import { FiMail, FiPlus } from "react-icons/fi";
+
 import MessagesPanel from "@/components/messages/MessagesPanel";
 import { requireUser } from "@/lib/auth";
+import { canSendDirectEmail } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
 
 export default async function MessagesPage() {
@@ -46,14 +50,34 @@ export default async function MessagesPage() {
 
   return (
     <div className="space-y-5">
-      <section>
-        <h1 className="page-title text-slate-900">Messages</h1>
-        <p className="page-subtitle">
-          Messagerie interne simple pour la collaboration entre equipes.
-        </p>
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-amber-700">
+            <FiMail className="text-[12px]" />
+            Communication
+          </p>
+          <h1 className="page-title text-slate-900">Messages</h1>
+          <p className="page-subtitle">
+            {user.role === "agent"
+              ? "Consultez vos messages recus et envoyez seulement aux administrateurs et managers."
+              : "Historique des emails envoyes et recus. Cliquez sur Nouveau pour rediger un email direct."}
+          </p>
+        </div>
+        {canSendDirectEmail(user.role) && (
+          <Link href="/messages/new" className="app-btn-primary">
+            <FiPlus className="text-sm" />
+            Nouveau
+          </Link>
+        )}
       </section>
 
-      <MessagesPanel messages={messages} users={users} currentUserId={user.id} />
+      <MessagesPanel
+        messages={messages}
+        users={users}
+        view="list"
+        currentUserId={user.id}
+        currentUserRole={user.role}
+      />
     </div>
   );
 }

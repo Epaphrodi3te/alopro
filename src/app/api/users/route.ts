@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { hashPassword, requireApiUser } from "@/lib/auth";
 import { apiError } from "@/lib/api";
-import { ROLE_OPTIONS } from "@/lib/constants";
+import { DEPARTMENT_OPTIONS, ROLE_OPTIONS } from "@/lib/constants";
 import { canManageUsers } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
 
@@ -14,6 +14,7 @@ const createUserSchema = z.object({
   phone: z.string().trim().min(6).optional().or(z.literal("")),
   password: z.string().min(8),
   role: z.enum(ROLE_OPTIONS),
+  department: z.enum(DEPARTMENT_OPTIONS),
 });
 
 export async function GET(request: NextRequest) {
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
       email: true,
       phone: true,
       role: true,
+      department: true,
       createdAt: true,
     },
   });
@@ -76,6 +78,7 @@ export async function POST(request: NextRequest) {
         email,
         phone: parsed.data.phone || null,
         role: parsed.data.role,
+        department: parsed.data.department,
         password,
       },
       select: {
@@ -85,6 +88,7 @@ export async function POST(request: NextRequest) {
         email: true,
         phone: true,
         role: true,
+        department: true,
         createdAt: true,
       },
     });

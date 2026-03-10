@@ -48,6 +48,7 @@ export async function POST(request: Request) {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        department: user.department,
         createdAt: user.createdAt,
       },
     });

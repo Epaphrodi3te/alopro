@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import { z } from "zod";
 
 import { apiError, parseDate } from "@/lib/api";
@@ -9,20 +9,50 @@ import {
 } from "@/lib/constants";
 import { requireApiUser } from "@/lib/auth";
 import { canAssignTask, canCreateTask } from "@/lib/permissions";
+import { syncProjectProgressFromTasks } from "@/lib/project-progress";
+import { canUserViewProject } from "@/lib/project-visibility";
+import { getTaskVisibilityWhereForUser } from "@/lib/task-visibility";
 import prisma from "@/lib/prisma";
 
 const createTaskSchema = z.object({
   title: z.string().trim().min(2),
   description: z.string().trim().min(3),
-  projectId: z.string().cuid(),
+  projectId: z.string().cuid().optional().or(z.literal("")),
   priority: z.enum(TASK_PRIORITY_OPTIONS).optional(),
   status: z.enum(TASK_STATUS_OPTIONS).optional(),
   deadline: z.string().optional().or(z.literal("")),
   assignedToId: z.string().cuid().optional().or(z.literal("")),
+  reportRequired: z.boolean().optional(),
+  commissionCfa: z.union([z.number().int().min(0), z.string().trim().regex(/^\d+$/), z.literal(""), z.null()]).optional(),
 });
 
-function canManagerAccessProject(userId: string, project: { createdById: string; assignedToId: string | null }) {
-  return project.createdById === userId || project.assignedToId === userId;
+function parseCommissionCfa(value: unknown) {
+  if (value === undefined) {
+    return null;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function canAssignTaskToRole(actorRole: Role, assigneeRole: Role) {
+  if (actorRole === "admin") {
+    return assigneeRole === "manager" || assigneeRole === "agent";
+  }
+
+  if (actorRole === "manager") {
+    return assigneeRole === "agent";
+  }
+
+  return false;
 }
 
 export async function GET(request: NextRequest) {
@@ -31,24 +61,10 @@ export async function GET(request: NextRequest) {
     return apiError("Unauthorized", 401);
   }
 
-  let where: Prisma.TaskWhereInput = {};
-
-  if (user.role === "manager") {
-    where = {
-      OR: [
-        { createdById: user.id },
-        { assignedToId: user.id },
-        { project: { createdById: user.id } },
-        { project: { assignedToId: user.id } },
-      ],
-    };
-  }
-
-  if (user.role === "agent") {
-    where = {
-      assignedToId: user.id,
-    };
-  }
+  const where: Prisma.TaskWhereInput = getTaskVisibilityWhereForUser({
+    id: user.id,
+    role: user.role,
+  });
 
   const tasks = await prisma.task.findMany({
     where,
@@ -101,28 +117,58 @@ export async function POST(request: NextRequest) {
       return apiError("Donnees de tache invalides.", 400);
     }
 
-    const project = await prisma.project.findUnique({
-      where: { id: parsed.data.projectId },
-      select: {
-        id: true,
-        createdById: true,
-        assignedToId: true,
-      },
-    });
+    const normalizedProjectId = parsed.data.projectId || null;
+    let project:
+      | {
+          id: string;
+          createdById: string;
+          assignedToId: string | null;
+          memberships: Array<{ userId: string }>;
+          createdBy: { role: Role };
+        }
+      | null = null;
 
-    if (!project) {
-      return apiError("Projet introuvable.", 404);
-    }
+    if (normalizedProjectId) {
+      project = await prisma.project.findUnique({
+        where: { id: normalizedProjectId },
+        select: {
+          id: true,
+          createdById: true,
+          assignedToId: true,
+          memberships: {
+            select: {
+              userId: true,
+            },
+          },
+          createdBy: {
+            select: {
+              role: true,
+            },
+          },
+        },
+      });
 
-    if (user.role === "manager" && !canManagerAccessProject(user.id, project)) {
-      return apiError("Vous ne pouvez creer une tache que sur vos projets.", 403);
-    }
+      if (!project) {
+        return apiError("Projet introuvable.", 404);
+      }
 
-    if (user.role === "agent" && project.assignedToId !== user.id) {
-      return apiError("Un agent ne peut creer une tache que sur un projet qui lui est assigne.", 403);
+      if (
+        !canUserViewProject(
+          { id: user.id, role: user.role },
+          {
+            createdById: project.createdById,
+            assignedToId: project.assignedToId,
+            assignedMemberIds: project.memberships.map((member) => member.userId),
+            createdByRole: project.createdBy.role,
+          },
+        )
+      ) {
+        return apiError("Projet non accessible.", 403);
+      }
     }
 
     let assignedToId: string | null = null;
+    const reportRequired = user.role === "admin" ? Boolean(parsed.data.reportRequired) : false;
 
     if (user.role === "agent") {
       // Agents cannot assign tasks to others; self-assignment preserves visibility rules.
@@ -143,8 +189,8 @@ export async function POST(request: NextRequest) {
         return apiError("Utilisateur a assigner introuvable.", 404);
       }
 
-      if (assignee.role !== "agent") {
-        return apiError("Une tache doit etre assignee a un agent.", 400);
+      if (!canAssignTaskToRole(user.role, assignee.role)) {
+        return apiError("Role d'assignation non autorise pour cette tache.", 400);
       }
 
       assignedToId = assignee.id;
@@ -154,12 +200,17 @@ export async function POST(request: NextRequest) {
       data: {
         title: parsed.data.title,
         description: parsed.data.description,
-        projectId: parsed.data.projectId,
+        commissionCfa: parseCommissionCfa(parsed.data.commissionCfa),
+        projectId: normalizedProjectId,
         createdById: user.id,
         assignedToId,
         priority: parsed.data.priority ?? "medium",
         status: parsed.data.status ?? "todo",
         deadline: parseDate(parsed.data.deadline),
+        reportRequired,
+        receivedAt: null,
+        deadlineValidatedAt: null,
+        progressPercent: 0,
       },
       include: {
         project: {
@@ -187,6 +238,10 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    if (task.projectId) {
+      await syncProjectProgressFromTasks(prisma, task.projectId);
+    }
 
     return NextResponse.json({ message: "Tache creee.", task }, { status: 201 });
   } catch {

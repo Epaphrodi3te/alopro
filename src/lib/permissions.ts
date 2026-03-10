@@ -1,6 +1,6 @@
 import { Project, Role, Task } from "@prisma/client";
 
-import { AuthUser } from "@/lib/auth";
+import type { AuthUser } from "@/lib/auth";
 
 export function isAdmin(user: Pick<AuthUser, "role"> | null) {
   return user?.role === "admin";
@@ -39,7 +39,7 @@ export function canDeleteProject(role: Role) {
 }
 
 export function canAssignProject(role: Role) {
-  return role === "admin";
+  return role === "admin" || role === "manager";
 }
 
 export function canCreateTask(role: Role) {
@@ -60,7 +60,7 @@ export function canEditTask(
   }
 
   if (user.role === "manager") {
-    return managedByCurrentManager || task.createdById === user.id;
+    return managedByCurrentManager || task.createdById === user.id || task.assignedToId === user.id;
   }
 
   return task.assignedToId === user.id;
@@ -68,4 +68,16 @@ export function canEditTask(
 
 export function canDeleteTask(role: Role) {
   return role === "admin";
+}
+
+export function canSendDirectEmail(role: Role) {
+  return role === "admin" || role === "manager" || role === "agent";
+}
+
+export function canSendMessageToRole(senderRole: Role, receiverRole: Role) {
+  if (senderRole === "agent") {
+    return receiverRole === "admin" || receiverRole === "manager";
+  }
+
+  return true;
 }
