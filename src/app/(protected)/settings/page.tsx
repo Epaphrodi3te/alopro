@@ -1,4 +1,5 @@
 import Badge from "@/components/ui/Badge";
+import PasswordSettingsForm from "@/components/settings/PasswordSettingsForm";
 import { requireUser } from "@/lib/auth";
 import { getDepartmentLabel } from "@/lib/constants";
 
@@ -7,9 +8,11 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-5">
-      <section>
-        <h1 className="page-title text-slate-900">Parametres</h1>
-        <p className="page-subtitle">Informations de votre compte et bonnes pratiques de securite.</p>
+      <section className="workspace-page-header">
+        <div>
+          <h1 className="page-title text-slate-900">Parametres</h1>
+          <p className="page-subtitle">Informations de votre compte et bonnes pratiques de securite.</p>
+        </div>
       </section>
 
       <section className="app-card p-5">
@@ -34,6 +37,8 @@ export default async function SettingsPage() {
       <section className="rounded-2xl border border-amber-200 bg-amber-50/90 p-5 text-sm text-amber-800">
         Les sessions sont gerees par token JWT stocke en cookie HTTP Only. Gardez vos identifiants confidentiels.
       </section>
+
+      <PasswordSettingsForm />
     </div>
   );
 }
