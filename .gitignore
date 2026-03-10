@@ -43,3 +43,6 @@ prisma/dev.db-*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# uploaded project files
+/uploads/

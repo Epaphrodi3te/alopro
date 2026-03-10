@@ -42,6 +42,9 @@ export type ProjectItem = {
   deadlineChangeReviewedBy: string | null;
   createdBy: UserLight;
   assignedTo: UserLight | null;
+  memberships?: Array<{
+    user: UserLight;
+  }>;
   tasks?: Array<{
     status: TaskStatus;
   }>;
@@ -90,4 +93,21 @@ export type MessageItem = {
   receiverId: string;
   sender: UserLight;
   receiver: UserLight;
+};
+
+export type ProjectFileItem = {
+  id: string;
+  projectId: string;
+  uploadedById: string;
+  displayName: string;
+  originalName: string;
+  storedName: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: Date;
+  project: {
+    id: string;
+    title: string;
+  };
+  uploadedBy: UserLight;
 };

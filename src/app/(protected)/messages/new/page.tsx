@@ -48,6 +48,7 @@ export default async function NewMessagePage() {
       <MessagesPanel
         messages={[]}
         users={users}
+        role={user.role}
         view="create"
         redirectAfterCreate="/messages"
         currentUserId={user.id}

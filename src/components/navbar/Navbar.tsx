@@ -24,6 +24,7 @@ const sectionByPath: Record<string, string> = {
   "/projects": "Projets",
   "/tasks": "Taches",
   "/messages": "Messages",
+  "/files": "Fichiers",
   "/settings": "Parametres",
 };
 

@@ -8,6 +8,7 @@ type ScopedUser = {
 type ProjectAccessContext = {
   createdById: string;
   assignedToId: string | null;
+  assignedMemberIds: string[];
   createdByRole: Role;
 };
 
@@ -25,13 +26,13 @@ export function getProjectVisibilityWhereForUser(user: ScopedUser): Prisma.Proje
 
   if (user.role === "manager") {
     return {
-      OR: [{ createdById: user.id }, { assignedToId: user.id }],
+      OR: [{ createdById: user.id }, { assignedToId: user.id }, { memberships: { some: { userId: user.id } } }],
     };
   }
 
   if (user.role === "agent") {
     return {
-      OR: [{ createdById: user.id }, { assignedToId: user.id }],
+      OR: [{ createdById: user.id }, { assignedToId: user.id }, { memberships: { some: { userId: user.id } } }],
     };
   }
 
@@ -44,8 +45,16 @@ export function canUserViewProject(user: ScopedUser, project: ProjectAccessConte
   }
 
   if (user.role === "manager") {
-    return project.createdById === user.id || project.assignedToId === user.id;
+    return (
+      project.createdById === user.id ||
+      project.assignedToId === user.id ||
+      project.assignedMemberIds.includes(user.id)
+    );
   }
 
-  return project.createdById === user.id || project.assignedToId === user.id;
+  return (
+    project.createdById === user.id ||
+    project.assignedToId === user.id ||
+    project.assignedMemberIds.includes(user.id)
+  );
 }

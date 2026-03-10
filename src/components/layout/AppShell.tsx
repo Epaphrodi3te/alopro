@@ -30,11 +30,11 @@ export default function AppShell({
   const [desktopCollapsed, setDesktopCollapsed] = useState(false);
   const [notificationCounts, setNotificationCounts] = useState<NavNotificationCounts>(initialNotificationCounts);
   const [seenAtByTab, setSeenAtByTab] = useState<
-    Record<"projects" | "tasks" | "messages" | "users", string> | null
+    Record<"projects" | "tasks" | "messages" | "users" | "files", string> | null
   >(null);
   const EPOCH_ISO = new Date(0).toISOString();
 
-  const tabStorageKey = `alopro:seen-notifications:v2:${userId}`;
+  const tabStorageKey = `alopro:seen-notifications:v3:${userId}`;
 
   const getTabFromPathname = (currentPathname: string): NavKey | null => {
     if (currentPathname.startsWith("/projects")) {
@@ -53,6 +53,10 @@ export default function AppShell({
       return "users";
     }
 
+    if (currentPathname.startsWith("/files")) {
+      return "files";
+    }
+
     return null;
   };
 
@@ -66,6 +70,7 @@ export default function AppShell({
       tasks: EPOCH_ISO,
       messages: EPOCH_ISO,
       users: EPOCH_ISO,
+      files: EPOCH_ISO,
     };
 
     try {
@@ -76,12 +81,13 @@ export default function AppShell({
         return;
       }
 
-      const parsed = JSON.parse(raw) as Partial<Record<"projects" | "tasks" | "messages" | "users", string>>;
+      const parsed = JSON.parse(raw) as Partial<Record<"projects" | "tasks" | "messages" | "users" | "files", string>>;
       const normalized = {
         projects: parsed.projects ?? EPOCH_ISO,
         tasks: parsed.tasks ?? EPOCH_ISO,
         messages: parsed.messages ?? EPOCH_ISO,
         users: parsed.users ?? EPOCH_ISO,
+        files: parsed.files ?? EPOCH_ISO,
       };
 
       localStorage.setItem(tabStorageKey, JSON.stringify(normalized));
@@ -94,7 +100,7 @@ export default function AppShell({
 
   useEffect(() => {
     const currentTab = getTabFromPathname(pathname);
-    if (!currentTab || (currentTab !== "projects" && currentTab !== "tasks" && currentTab !== "messages" && currentTab !== "users")) {
+    if (!currentTab || (currentTab !== "projects" && currentTab !== "tasks" && currentTab !== "messages" && currentTab !== "users" && currentTab !== "files")) {
       return;
     }
 
@@ -139,6 +145,7 @@ export default function AppShell({
           tasksSince: seenAtByTab.tasks,
           messagesSince: seenAtByTab.messages,
           usersSince: seenAtByTab.users,
+          filesSince: seenAtByTab.files,
         });
 
         const withParamsResponse = await fetch(`/api/notifications?${params.toString()}`, {
@@ -155,7 +162,7 @@ export default function AppShell({
           const currentTab = getTabFromPathname(pathname);
           const next = { ...data.counts };
 
-          if (currentTab && (currentTab === "projects" || currentTab === "tasks" || currentTab === "messages" || currentTab === "users")) {
+          if (currentTab && (currentTab === "projects" || currentTab === "tasks" || currentTab === "messages" || currentTab === "users" || currentTab === "files")) {
             next[currentTab] = 0;
           }
 

@@ -51,6 +51,18 @@ export default async function ProjectsPage() {
             role: true,
           },
         },
+        memberships: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+              },
+            },
+          },
+        },
         _count: {
           select: { tasks: true },
         },

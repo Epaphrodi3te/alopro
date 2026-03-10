@@ -12,6 +12,7 @@ import {
   FiFolder,
   FiGrid,
   FiMessageCircle,
+  FiPaperclip,
   FiSettings,
   FiUsers,
   FiX,
@@ -82,6 +83,7 @@ export default function Sidebar({
     "/projects": FiFolder,
     "/tasks": FiCheckSquare,
     "/messages": FiMessageCircle,
+    "/files": FiPaperclip,
     "/settings": FiSettings,
   };
 

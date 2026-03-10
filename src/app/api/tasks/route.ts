@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
           id: string;
           createdById: string;
           assignedToId: string | null;
+          memberships: Array<{ userId: string }>;
           createdBy: { role: Role };
         }
       | null = null;
@@ -134,6 +135,11 @@ export async function POST(request: NextRequest) {
           id: true,
           createdById: true,
           assignedToId: true,
+          memberships: {
+            select: {
+              userId: true,
+            },
+          },
           createdBy: {
             select: {
               role: true,
@@ -152,6 +158,7 @@ export async function POST(request: NextRequest) {
           {
             createdById: project.createdById,
             assignedToId: project.assignedToId,
+            assignedMemberIds: project.memberships.map((member) => member.userId),
             createdByRole: project.createdBy.role,
           },
         )

@@ -11,6 +11,7 @@ type TaskAccessContext = {
   project: {
     createdById: string;
     assignedToId: string | null;
+    assignedMemberIds: string[];
     createdByRole: Role;
   } | null;
 };
@@ -41,13 +42,19 @@ export function getTaskVisibilityWhereForUser(user: ScopedUser): Prisma.TaskWher
         { assignedToId: user.id },
         { project: { createdById: user.id } },
         { project: { assignedToId: user.id } },
+        { project: { memberships: { some: { userId: user.id } } } },
       ],
     };
   }
 
   if (user.role === "agent") {
     return {
-      OR: [{ createdById: user.id }, { assignedToId: user.id }, { project: { createdById: user.id } }],
+      OR: [
+        { createdById: user.id },
+        { assignedToId: user.id },
+        { project: { createdById: user.id } },
+        { project: { memberships: { some: { userId: user.id } } } },
+      ],
     };
   }
 
@@ -66,10 +73,17 @@ export function canUserViewTask(user: ScopedUser, task: TaskAccessContext) {
   if (user.role === "manager") {
     const managesProject =
       !!task.project &&
-      (task.project.createdById === user.id || task.project.assignedToId === user.id);
+      (task.project.createdById === user.id ||
+        task.project.assignedToId === user.id ||
+        task.project.assignedMemberIds.includes(user.id));
 
     return task.createdById === user.id || task.assignedToId === user.id || managesProject;
   }
 
-  return task.createdById === user.id || task.assignedToId === user.id || task.project?.createdById === user.id;
+  return (
+    task.createdById === user.id ||
+    task.assignedToId === user.id ||
+    task.project?.createdById === user.id ||
+    Boolean(task.project?.assignedMemberIds.includes(user.id))
+  );
 }

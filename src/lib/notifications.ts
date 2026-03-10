@@ -15,6 +15,7 @@ export type NotificationSeenAt = Partial<{
   tasks: Date;
   messages: Date;
   users: Date;
+  files: Date;
 }>;
 
 const EPOCH = new Date(0);
@@ -38,7 +39,7 @@ export async function getNotificationCountsForUser(
 ): Promise<NavNotificationCounts> {
   const { projectWhere, taskWhere } = buildScopeForRole(user);
 
-  const [projectsCount, tasksCount, messagesCount, usersCount] = await Promise.all([
+  const [projectsCount, tasksCount, messagesCount, usersCount, filesCount] = await Promise.all([
     prisma.project.count({
       where: {
         ...projectWhere,
@@ -65,6 +66,13 @@ export async function getNotificationCountsForUser(
           },
         })
       : Promise.resolve(0),
+    user.role === "admin"
+      ? prisma.projectFile.count({
+          where: {
+            createdAt: { gt: seenAt.files ?? EPOCH },
+          },
+        })
+      : Promise.resolve(0),
   ]);
 
   const counts: NavNotificationCounts = {
@@ -76,6 +84,7 @@ export async function getNotificationCountsForUser(
 
   if (user.role === "admin") {
     counts.users = usersCount;
+    counts.files = filesCount;
   }
 
   counts.dashboard = getDashboardNotificationCount(counts);

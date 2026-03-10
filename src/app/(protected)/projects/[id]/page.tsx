@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FiArrowLeft, FiBriefcase, FiCalendar, FiCheckCircle, FiClock, FiFileText, FiList, FiTrendingUp, FiUser } from "react-icons/fi";
+import { FiArrowLeft, FiBriefcase, FiCalendar, FiCheckCircle, FiFileText, FiList, FiTrendingUp, FiUser, FiUsers } from "react-icons/fi";
 
 import ProjectAssignmentWorkflowCard from "@/components/projects/ProjectAssignmentWorkflowCard";
+import ProjectFileSubmissionCard from "@/components/projects/ProjectFileSubmissionCard";
 import ProjectQuickHeaderCard from "@/components/projects/ProjectQuickHeaderCard";
 import Badge from "@/components/ui/Badge";
 import { requireUser } from "@/lib/auth";
@@ -77,10 +78,34 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
           role: true,
         },
       },
+      memberships: {
+        select: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
+        },
+      },
       tasks: {
         orderBy: { createdAt: "desc" },
         include: {
           assignedTo: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      },
+      files: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          uploadedBy: {
             select: {
               id: true,
               firstName: true,
@@ -101,6 +126,7 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
     {
       createdById: project.createdById,
       assignedToId: project.assignedToId,
+      assignedMemberIds: project.memberships.map((membership) => membership.user.id),
       createdByRole: project.createdBy.role,
     },
   );
@@ -130,8 +156,16 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
     { id: current.id, role: current.role },
     { createdById: project.createdById },
   );
-  const isAssignee = project.assignedToId === current.id;
+  const assignedMembers =
+    project.memberships.length > 0
+      ? project.memberships.map((membership) => membership.user)
+      : project.assignedTo
+        ? [project.assignedTo]
+        : [];
+  const isAssignee = assignedMembers.some((member) => member.id === current.id) || project.assignedToId === current.id;
   const canReviewDeadlineChange = current.role === "admin" || project.createdById === current.id;
+  const canSubmitProjectFile =
+    current.role === "admin" || project.createdById === current.id || assignedMembers.some((member) => member.id === current.id);
   const deadlineChangeRequestedDateLabel = project.deadlineChangeRequestedDate ? formatDate(project.deadlineChangeRequestedDate) : "";
   const completedAtLabel = project.completedAt ? formatDate(project.completedAt) : "";
   const projectDeadlineInputValue = project.deadline ? project.deadline.toISOString().slice(0, 10) : "";
@@ -249,11 +283,14 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-3">
               <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-                <FiClock />
-                Assigne a
+                <FiUsers />
+                Equipe assignee
               </p>
-              <p className="mt-1 font-semibold text-slate-900">
-                {project.assignedTo ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}` : "Aucune assignation"}
+              <p className="mt-1 font-semibold text-slate-900">{assignedMembers.length} personne{assignedMembers.length > 1 ? "s" : ""}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {assignedMembers.length > 0
+                  ? assignedMembers.map((member) => `${member.firstName} ${member.lastName}`).join(", ")
+                  : "Aucune assignation"}
               </p>
             </div>
           </div>
@@ -342,7 +379,7 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
 
       <ProjectAssignmentWorkflowCard
         projectId={project.id}
-        assignedToId={project.assignedToId}
+        assignedToId={project.assignedToId ?? assignedMembers[0]?.id ?? null}
         isAssignee={isAssignee}
         canReviewDeadlineChange={canReviewDeadlineChange}
         reportRequired={project.reportRequired}
@@ -357,6 +394,18 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
         deadlineLabel={formatDate(project.deadline)}
         progressDerivedFromTasks={progressDerivedFromTasks}
         linkedTasksCount={totalTasks}
+      />
+
+      <ProjectFileSubmissionCard
+        projectId={project.id}
+        canSubmit={canSubmitProjectFile}
+        files={project.files.map((file) => ({
+          id: file.id,
+          displayName: file.displayName,
+          sizeBytes: file.sizeBytes,
+          createdAtLabel: formatDate(file.createdAt),
+          uploadedByName: `${file.uploadedBy.firstName} ${file.uploadedBy.lastName}`,
+        }))}
       />
     </div>
   );
