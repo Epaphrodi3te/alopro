@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 
-export type NavKey = "dashboard" | "users" | "projects" | "tasks" | "messages" | "settings";
+export type NavKey = "dashboard" | "users" | "projects" | "tasks" | "messages" | "files" | "settings";
 export type NavNotificationCounts = Partial<Record<NavKey, number>>;
 
 export type NavItem = {
@@ -29,6 +29,7 @@ export function getMenuByRole(role: Role): NavItem[] {
       { key: "projects", href: "/projects", label: "Projets" },
       { key: "tasks", href: "/tasks", label: "Taches" },
       { key: "messages", href: "/messages", label: "Messages" },
+      { key: "files", href: "/files", label: "Fichiers" },
       { key: "settings", href: "/settings", label: "Parametres" },
     ];
   }
@@ -52,5 +53,11 @@ export function getMenuByRole(role: Role): NavItem[] {
 }
 
 export function getDashboardNotificationCount(counts: NavNotificationCounts) {
-  return (counts.projects ?? 0) + (counts.tasks ?? 0) + (counts.messages ?? 0) + (counts.users ?? 0);
+  return (
+    (counts.projects ?? 0) +
+    (counts.tasks ?? 0) +
+    (counts.messages ?? 0) +
+    (counts.users ?? 0) +
+    (counts.files ?? 0)
+  );
 }

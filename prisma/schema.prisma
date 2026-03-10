@@ -58,6 +58,8 @@ model User {
   assignedProjects Project[] @relation("ProjectAssignee")
   createdTasks     Task[]    @relation("TaskCreator")
   assignedTasks    Task[]    @relation("TaskAssignee")
+  projectMemberships ProjectMember[]
+  uploadedProjectFiles ProjectFile[] @relation("ProjectFileUploader")
   sentMessages     Message[] @relation("MessageSender")
   receivedMessages Message[] @relation("MessageReceiver")
 
@@ -88,11 +90,43 @@ model Project {
   createdAt                 DateTime             @default(now()) @map("created_at")
   createdBy                 User                 @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Cascade)
   assignedTo                User?                @relation("ProjectAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  memberships               ProjectMember[]
+  files                     ProjectFile[]
   tasks                     Task[]
 
   @@index([createdById])
   @@index([assignedToId])
   @@map("projects")
+}
+
+model ProjectMember {
+  projectId String   @map("project_id")
+  userId    String   @map("user_id")
+  addedAt   DateTime @default(now()) @map("added_at")
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+model ProjectFile {
+  id           String   @id @default(cuid())
+  projectId    String   @map("project_id")
+  uploadedById String   @map("uploaded_by")
+  displayName  String   @map("display_name")
+  originalName String   @map("original_name")
+  storedName   String   @unique @map("stored_name")
+  mimeType     String   @map("mime_type")
+  sizeBytes    Int      @map("size_bytes")
+  createdAt    DateTime @default(now()) @map("created_at")
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation("ProjectFileUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([uploadedById])
+  @@map("project_files")
 }
 
 model Task {

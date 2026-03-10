@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
+import { Role } from "@prisma/client";
 import {
   FiChevronLeft,
   FiChevronRight,
@@ -13,6 +14,7 @@ import {
   FiMail,
   FiSearch,
   FiSend,
+  FiTrash2,
   FiUser,
 } from "react-icons/fi";
 
@@ -27,6 +29,7 @@ import { MessageItem, UserLight } from "@/lib/types";
 type MessagesPanelProps = {
   messages: MessageItem[];
   users: UserLight[];
+  role: Role;
   view?: "all" | "list" | "create";
   redirectAfterCreate?: string;
 };
@@ -34,6 +37,7 @@ type MessagesPanelProps = {
 export default function MessagesPanel({
   messages,
   users,
+  role,
   view = "all",
   redirectAfterCreate,
 }: MessagesPanelProps) {
@@ -159,6 +163,42 @@ export default function MessagesPanel({
       await showError("Erreur reseau", "Impossible d'envoyer le message.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (role !== "admin") {
+      await showError("Action refusee", "Seul l'admin peut supprimer un message.");
+      return;
+    }
+
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Supprimer message",
+      text: "Ce message sera supprime definitivement.",
+      showCancelButton: true,
+      confirmButtonText: "Supprimer",
+      cancelButtonText: "Annuler",
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/messages/${messageId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        await showError("Suppression impossible", await extractApiError(response));
+        return;
+      }
+
+      await showSuccess("Message supprime");
+      router.refresh();
+    } catch {
+      await showError("Erreur reseau", "Impossible de supprimer le message.");
     }
   };
 
@@ -380,14 +420,26 @@ export default function MessagesPanel({
                       Le contenu est masque ici pour garder un historique plus
                       propre.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => openMessagePreview(message)}
-                      className="border border-gray-200 hover:bg-slate-200 inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium"
-                    >
-                      <FiEye className="text-sm" />
-                      Voir le message
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openMessagePreview(message)}
+                        className="border border-gray-200 hover:bg-slate-200 inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium"
+                      >
+                        <FiEye className="text-sm" />
+                        Voir le message
+                      </button>
+                      {role === "admin" && (
+                        <button
+                          type="button"
+                          onClick={() => deleteMessage(message.id)}
+                          className="app-btn-danger"
+                        >
+                          <FiTrash2 className="text-sm" />
+                          Supprimer
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </article>
               ))}

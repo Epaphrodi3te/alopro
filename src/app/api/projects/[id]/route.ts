@@ -8,6 +8,7 @@ import { requireApiUser } from "@/lib/auth";
 import { canAssignProject, canDeleteProject, canEditProject } from "@/lib/permissions";
 import { computeProjectProgressFromTasks, syncProjectProgressFromTasks } from "@/lib/project-progress";
 import { canUserViewProject } from "@/lib/project-visibility";
+import { deleteProjectFile } from "@/lib/project-file-storage";
 import prisma from "@/lib/prisma";
 
 const updateProjectSchema = z.object({
@@ -16,6 +17,7 @@ const updateProjectSchema = z.object({
   deadline: z.string().optional().or(z.literal("")),
   status: z.enum(PROJECT_STATUS_OPTIONS).optional(),
   assignedToId: z.string().cuid().optional().nullable().or(z.literal("")),
+  assignedMemberIds: z.array(z.string().cuid()).optional(),
   reportRequired: z.boolean().optional(),
   commissionCfa: z.union([z.number().int().min(0), z.string().trim().regex(/^\d+$/), z.literal(""), z.null()]).optional(),
   received: z.boolean().optional(),
@@ -57,6 +59,21 @@ function canAssignProjectToRole(actorRole: Role, assigneeRole: Role) {
   return false;
 }
 
+function hasSameIds(a: string[], b: string[]) {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  const setA = new Set(a);
+  for (const id of b) {
+    if (!setA.has(id)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 type Params = {
   params: Promise<{ id: string }>;
 };
@@ -82,6 +99,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
           progressPercent: true,
         },
       },
+      memberships: {
+        select: {
+          userId: true,
+        },
+      },
     },
   });
   if (!project) {
@@ -94,6 +116,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       {
         createdById: project.createdById,
         assignedToId: project.assignedToId,
+        assignedMemberIds: project.memberships.map((member) => member.userId),
         createdByRole: project.createdBy.role,
       },
     )
@@ -110,6 +133,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const hasTasks = project.tasks.length > 0;
+    const currentAssignedMemberIds = project.memberships.map((member) => member.userId);
+    const isCurrentAssignee = currentAssignedMemberIds.includes(current.id) || project.assignedToId === current.id;
 
     const data: {
       title?: string;
@@ -137,7 +162,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
       parsed.data.commissionCfa !== undefined ||
       parsed.data.deadline !== undefined ||
       parsed.data.status !== undefined ||
-      parsed.data.assignedToId !== undefined;
+      parsed.data.assignedToId !== undefined ||
+      parsed.data.assignedMemberIds !== undefined;
     const wantsWorkflowUpdate =
       parsed.data.received !== undefined ||
       parsed.data.deadlineValidated !== undefined ||
@@ -189,31 +215,46 @@ export async function PUT(request: NextRequest, { params }: Params) {
       data.commissionCfa = normalizedCommission;
     }
 
-    if (parsed.data.assignedToId !== undefined) {
+    const hasAssignmentPayload = parsed.data.assignedMemberIds !== undefined || parsed.data.assignedToId !== undefined;
+    let nextAssignedMemberIds: string[] | null = null;
+
+    if (hasAssignmentPayload) {
       if (!canAssignProject(current.role)) {
         return apiError("Vous ne pouvez pas assigner un projet.", 403);
       }
 
-      if (!parsed.data.assignedToId) {
-        data.assignedToId = null;
-      } else {
-        const assignee = await prisma.user.findUnique({
-          where: { id: parsed.data.assignedToId },
+      const requestedMemberIds = new Set<string>();
+
+      if (parsed.data.assignedToId !== undefined && parsed.data.assignedToId) {
+        requestedMemberIds.add(parsed.data.assignedToId);
+      }
+
+      for (const memberId of parsed.data.assignedMemberIds ?? []) {
+        requestedMemberIds.add(memberId);
+      }
+
+      nextAssignedMemberIds = Array.from(requestedMemberIds);
+
+      if (nextAssignedMemberIds.length > 0) {
+        const assignees = await prisma.user.findMany({
+          where: { id: { in: nextAssignedMemberIds } },
           select: { id: true, role: true },
         });
 
-        if (!assignee) {
-          return apiError("Utilisateur a assigner introuvable.", 404);
+        if (assignees.length !== nextAssignedMemberIds.length) {
+          return apiError("Un ou plusieurs utilisateurs a assigner sont introuvables.", 404);
         }
 
-        if (!canAssignProjectToRole(current.role, assignee.role)) {
-          return apiError("Role d'assignation non autorise pour ce projet.", 400);
+        for (const assignee of assignees) {
+          if (!canAssignProjectToRole(current.role, assignee.role)) {
+            return apiError("Role d'assignation non autorise pour ce projet.", 400);
+          }
         }
-
-        data.assignedToId = assignee.id;
       }
 
-      if (data.assignedToId !== project.assignedToId) {
+      data.assignedToId = nextAssignedMemberIds[0] ?? null;
+
+      if (!hasSameIds(currentAssignedMemberIds, nextAssignedMemberIds)) {
         data.receivedAt = null;
         data.deadlineValidatedAt = null;
         data.progressPercent = 0;
@@ -227,7 +268,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       }
     }
 
-    if (wantsWorkflowUpdate && current.role !== "admin" && project.assignedToId !== current.id) {
+    if (wantsWorkflowUpdate && current.role !== "admin" && !isCurrentAssignee) {
       return apiError("Seul l'utilisateur assigne peut confirmer la reception et la progression du projet.", 403);
     }
 
@@ -283,7 +324,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
         return apiError("La progression du projet est calculee automatiquement depuis les taches.", 400);
       }
 
-      if (!wantsWorkflowUpdate && current.role !== "admin" && project.assignedToId !== current.id) {
+      if (!wantsWorkflowUpdate && current.role !== "admin" && !isCurrentAssignee) {
         return apiError("Seul l'utilisateur assigne peut mettre a jour la progression du projet.", 403);
       }
 
@@ -291,7 +332,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     if (wantsDeadlineRequest) {
-      if (!project.assignedToId || project.assignedToId !== current.id) {
+      if (!isCurrentAssignee) {
         return apiError("Seul l'utilisateur assigne peut demander une nouvelle date.", 403);
       }
 
@@ -328,7 +369,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     if (wantsCompletionUpdate) {
-      if (current.role !== "admin" && project.assignedToId !== current.id) {
+      if (current.role !== "admin" && !isCurrentAssignee) {
         return apiError("Seul l'utilisateur assigne peut finaliser le projet avec compte rendu.", 403);
       }
 
@@ -365,37 +406,74 @@ export async function PUT(request: NextRequest, { params }: Params) {
       }
     }
 
-    const updated = await prisma.project.update({
-      where: { id },
-      data,
-      include: {
-        tasks: {
-          select: {
-            status: true,
-            progressPercent: true,
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.project.update({
+        where: { id },
+        data,
+      });
+
+      if (hasAssignmentPayload) {
+        await tx.projectMember.deleteMany({
+          where: { projectId: id },
+        });
+
+        if (nextAssignedMemberIds && nextAssignedMemberIds.length > 0) {
+          await tx.projectMember.createMany({
+            data: nextAssignedMemberIds.map((memberId) => ({
+              projectId: id,
+              userId: memberId,
+            })),
+          });
+        }
+      }
+
+      return tx.project.findUnique({
+        where: { id },
+        include: {
+          tasks: {
+            select: {
+              status: true,
+              progressPercent: true,
+            },
+          },
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
+          assignedTo: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
+          memberships: {
+            select: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  role: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: { tasks: true },
           },
         },
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            role: true,
-          },
-        },
-        assignedTo: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            role: true,
-          },
-        },
-        _count: {
-          select: { tasks: true },
-        },
-      },
+      });
     });
+
+    if (!updated) {
+      return apiError("Projet introuvable.", 404);
+    }
 
     if (updated._count.tasks > 0) {
       await syncProjectProgressFromTasks(prisma, updated.id);
@@ -423,6 +501,18 @@ export async function PUT(request: NextRequest, { params }: Params) {
               firstName: true,
               lastName: true,
               role: true,
+            },
+          },
+          memberships: {
+            select: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  role: true,
+                },
+              },
             },
           },
           _count: {
@@ -462,6 +552,16 @@ export async function DELETE(request: NextRequest, { params }: Params) {
           role: true,
         },
       },
+      memberships: {
+        select: {
+          userId: true,
+        },
+      },
+      files: {
+        select: {
+          storedName: true,
+        },
+      },
     },
   });
   if (!project) {
@@ -474,11 +574,16 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       {
         createdById: project.createdById,
         assignedToId: project.assignedToId,
+        assignedMemberIds: project.memberships.map((member) => member.userId),
         createdByRole: project.createdBy.role,
       },
     )
   ) {
     return apiError("Projet non accessible.", 403);
+  }
+
+  for (const file of project.files) {
+    await deleteProjectFile(file.storedName);
   }
 
   await prisma.project.delete({ where: { id } });

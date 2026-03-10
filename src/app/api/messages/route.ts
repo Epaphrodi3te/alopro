@@ -27,9 +27,12 @@ export async function GET(request: NextRequest) {
   }
 
   const messages = await prisma.message.findMany({
-    where: {
-      senderId: user.id,
-    },
+    where:
+      user.role === "admin"
+        ? undefined
+        : {
+            senderId: user.id,
+          },
     orderBy: { createdAt: "desc" },
     include: {
       sender: {

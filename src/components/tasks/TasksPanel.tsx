@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { Role } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { FiCalendar, FiEdit2, FiEye, FiFolder, FiPlusCircle, FiTrash2, FiTrendingUp, FiUser } from "react-icons/fi";
+import { FiCalendar, FiEdit2, FiEye, FiFilter, FiFolder, FiPlusCircle, FiSearch, FiTrash2, FiTrendingUp, FiUser } from "react-icons/fi";
 import Swal from "sweetalert2";
 
 import Badge from "@/components/ui/Badge";
@@ -92,6 +92,10 @@ export default function TasksPanel({
     ...initialForm,
     projectId: projects[0]?.id ?? "",
   });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "todo" | "in_progress" | "done">("all");
+  const [priorityFilter, setPriorityFilter] = useState<"all" | "low" | "medium" | "high">("all");
+  const [projectScopeFilter, setProjectScopeFilter] = useState<"all" | "with_project" | "independent">("all");
   const [loading, setLoading] = useState(false);
 
   const showCreate = view !== "list";
@@ -111,6 +115,42 @@ export default function TasksPanel({
       }),
     [tasks],
   );
+  const filteredTasks = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return sortedTasks.filter((task) => {
+      if (statusFilter !== "all" && task.status !== statusFilter) {
+        return false;
+      }
+
+      if (priorityFilter !== "all" && task.priority !== priorityFilter) {
+        return false;
+      }
+
+      const hasProject = Boolean(task.projectId);
+      if (projectScopeFilter === "independent" && hasProject) {
+        return false;
+      }
+
+      if (projectScopeFilter === "with_project" && !hasProject) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const searchableParts = [
+        task.title,
+        task.description,
+        task.project?.title ?? "",
+        task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "",
+      ];
+      const haystack = searchableParts.join(" ").toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [priorityFilter, projectScopeFilter, searchQuery, sortedTasks, statusFilter]);
 
   const canAssignTask = role === "admin" || role === "manager";
   const canRequireReport = role === "admin";
@@ -463,13 +503,101 @@ export default function TasksPanel({
 
       {showList && (
         <section className="space-y-3">
+          <article className="app-card p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[240px] flex-1">
+                <label htmlFor="tasks-search" className="field-label">Recherche rapide</label>
+                <div className="relative mt-1">
+                  <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    id="tasks-search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Titre, description, projet, assignee..."
+                    className="app-input pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="min-w-[170px]">
+                <label htmlFor="tasks-type-filter" className="field-label">Type de tache</label>
+                <select
+                  id="tasks-type-filter"
+                  value={projectScopeFilter}
+                  onChange={(event) => setProjectScopeFilter(event.target.value as typeof projectScopeFilter)}
+                  className="app-select mt-1"
+                >
+                  <option value="all">Toutes</option>
+                  <option value="independent">Independantes</option>
+                  <option value="with_project">Sous projet</option>
+                </select>
+              </div>
+
+              <div className="min-w-[150px]">
+                <label htmlFor="tasks-status-filter" className="field-label">Statut</label>
+                <select
+                  id="tasks-status-filter"
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
+                  className="app-select mt-1"
+                >
+                  <option value="all">Tous</option>
+                  <option value="todo">todo</option>
+                  <option value="in_progress">in_progress</option>
+                  <option value="done">done</option>
+                </select>
+              </div>
+
+              <div className="min-w-[150px]">
+                <label htmlFor="tasks-priority-filter" className="field-label">Priorite</label>
+                <select
+                  id="tasks-priority-filter"
+                  value={priorityFilter}
+                  onChange={(event) => setPriorityFilter(event.target.value as typeof priorityFilter)}
+                  className="app-select mt-1"
+                >
+                  <option value="all">Toutes</option>
+                  <option value="high">high</option>
+                  <option value="medium">medium</option>
+                  <option value="low">low</option>
+                </select>
+              </div>
+
+              {(searchQuery || statusFilter !== "all" || priorityFilter !== "all" || projectScopeFilter !== "all") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setStatusFilter("all");
+                    setPriorityFilter("all");
+                    setProjectScopeFilter("all");
+                  }}
+                  className="app-btn-outline"
+                >
+                  <FiFilter className="text-sm" />
+                  Reinitialiser
+                </button>
+              )}
+            </div>
+
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+              {filteredTasks.length} resultat{filteredTasks.length > 1 ? "s" : ""} affiche{filteredTasks.length > 1 ? "s" : ""}
+            </p>
+          </article>
+
           {sortedTasks.length === 0 && (
             <article className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
               Aucune tache trouvee.
             </article>
           )}
 
-          {sortedTasks.map((task) => (
+          {sortedTasks.length > 0 && filteredTasks.length === 0 && (
+            <article className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
+              Aucune tache ne correspond aux filtres actuels.
+            </article>
+          )}
+
+          {filteredTasks.map((task) => (
             <article
               key={task.id}
               className="group rounded-2xl border border-slate-200 bg-[linear-gradient(165deg,#ffffff,#f8fafc_85%)] p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"

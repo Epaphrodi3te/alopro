@@ -1,6 +1,18 @@
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
-import { FiArrowRight, FiCalendar, FiCheckSquare, FiFolder, FiMessageSquare, FiPlus, FiTarget, FiUser, FiUsers } from "react-icons/fi";
+import {
+  FiArrowRight,
+  FiBriefcase,
+  FiCalendar,
+  FiCheckSquare,
+  FiClipboard,
+  FiFolder,
+  FiMail,
+  FiPlus,
+  FiTarget,
+  FiUser,
+  FiUserCheck,
+} from "react-icons/fi";
 
 import StatCard from "@/components/cards/StatCard";
 import { requireUser } from "@/lib/auth";
@@ -51,14 +63,14 @@ function taskStatusBadge(status: "todo" | "in_progress" | "done") {
 
 function projectSurface(status: "pending" | "in_progress" | "completed") {
   if (status === "pending") {
-    return "border-l-4 border-l-amber-400 bg-[linear-gradient(160deg,#ffffff,#fff7d6)]";
+    return "border-l-4 border-l-amber-400 bg-[linear-gradient(160deg,#ffffff,#fffaf0)]";
   }
 
   if (status === "in_progress") {
-    return "border-l-4 border-l-sky-400 bg-[linear-gradient(160deg,#ffffff,#e0f2fe)]";
+    return "border-l-4 border-l-sky-400 bg-[linear-gradient(160deg,#ffffff,#f0f9ff)]";
   }
 
-  return "border-l-4 border-l-emerald-400 bg-[linear-gradient(160deg,#ffffff,#dcfce7)]";
+  return "border-l-4 border-l-emerald-400 bg-[linear-gradient(160deg,#ffffff,#f0fdf4)]";
 }
 
 function taskSurface(status: "todo" | "in_progress" | "done") {
@@ -67,10 +79,10 @@ function taskSurface(status: "todo" | "in_progress" | "done") {
   }
 
   if (status === "in_progress") {
-    return "border-l-4 border-l-sky-400 bg-[linear-gradient(155deg,#ffffff,#eff6ff)]";
+    return "border-l-4 border-l-sky-400 bg-[linear-gradient(155deg,#ffffff,#f0f9ff)]";
   }
 
-  return "border-l-4 border-l-emerald-400 bg-[linear-gradient(155deg,#ffffff,#ecfdf5)]";
+  return "border-l-4 border-l-emerald-400 bg-[linear-gradient(155deg,#ffffff,#f0fdf4)]";
 }
 
 function mergeProjectWhere(base: Prisma.ProjectWhereInput, extra: Prisma.ProjectWhereInput): Prisma.ProjectWhereInput {
@@ -105,7 +117,7 @@ export default async function DashboardPage() {
   const inSevenDays = new Date(now);
   inSevenDays.setDate(now.getDate() + 7);
 
-  const [projectCount, taskCount, messageCount, recentProjects, recentTasks, userCount, dueSoonProjects, overdueTasks] = await Promise.all([
+  const [projectCount, taskCount, messageCount, imminentProjects, imminentTasks, userCount, dueSoonProjects, overdueTasks] = await Promise.all([
     prisma.project.count({ where: projectWhere }),
     prisma.task.count({ where: taskWhere }),
     prisma.message.count({
@@ -114,9 +126,12 @@ export default async function DashboardPage() {
       },
     }),
     prisma.project.findMany({
-      where: projectWhere,
-      orderBy: { createdAt: "desc" },
-      take: 5,
+      where: mergeProjectWhere(projectWhere, {
+        deadline: { not: null },
+        status: { not: "completed" },
+      }),
+      orderBy: [{ deadline: "asc" }, { createdAt: "desc" }],
+      take: 3,
       include: {
         tasks: {
           select: {
@@ -132,9 +147,12 @@ export default async function DashboardPage() {
       },
     }),
     prisma.task.findMany({
-      where: taskWhere,
-      orderBy: { createdAt: "desc" },
-      take: 5,
+      where: mergeTaskWhere(taskWhere, {
+        deadline: { not: null },
+        status: { not: "done" },
+      }),
+      orderBy: [{ deadline: "asc" }, { createdAt: "desc" }],
+      take: 3,
       include: {
         project: {
           select: {
@@ -206,95 +224,112 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Projets visibles" value={projectCount} icon={FiFolder} accent="indigo" />
-        <StatCard label="Taches visibles" value={taskCount} icon={FiCheckSquare} accent="emerald" />
-        <StatCard label="Messages" value={messageCount} icon={FiMessageSquare} accent="amber" />
-        {user.role === "admin" && <StatCard label="Utilisateurs" value={userCount} icon={FiUsers} accent="violet" />}
+        <StatCard label="Projets visibles" value={projectCount} icon={FiBriefcase} accent="indigo" />
+        <StatCard label="Taches visibles" value={taskCount} icon={FiClipboard} accent="emerald" />
+        <StatCard label="Messages" value={messageCount} icon={FiMail} accent="amber" />
+        {user.role === "admin" && <StatCard label="Utilisateurs" value={userCount} icon={FiUserCheck} accent="violet" />}
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <article className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-[linear-gradient(155deg,#f8fbff,#eef2ff_55%,#ffffff)] p-5 shadow-md">
-          <div className="pointer-events-none absolute -right-16 top-[-3.5rem] h-36 w-36 rounded-full bg-indigo-200/50 blur-3xl" />
-          <div className="pointer-events-none absolute -left-12 bottom-[-4.5rem] h-36 w-36 rounded-full bg-sky-200/45 blur-3xl" />
+        <article className="app-card p-5">
           <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-indigo-600">Focus portefeuille</p>
-              <h2 className="text-lg font-semibold text-slate-900">Projets recents</h2>
+            <div className="inline-flex items-center gap-2">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600">
+                <FiFolder className="text-base" />
+              </span>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Focus portefeuille</p>
+                <h2 className="text-lg font-semibold text-slate-900">Projets imminents</h2>
+              </div>
             </div>
-            <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50 px-2 text-xs font-semibold text-indigo-700">
-              {recentProjects.length}
+            <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-700">
+              {imminentProjects.length}
             </span>
           </div>
           <div className="relative mt-4 space-y-3">
-            {recentProjects.length === 0 && <p className="text-sm text-slate-500">Aucun projet pour le moment.</p>}
-            {recentProjects.map((project) => {
+            {imminentProjects.length === 0 && <p className="text-sm text-slate-500">Aucun projet imminent.</p>}
+            {imminentProjects.map((project) => {
               const totalTasks = project.tasks.length;
               const doneTasks = project.tasks.filter((task) => task.status === "done").length;
               const progressPercent = totalTasks === 0 ? 0 : Math.round((doneTasks / totalTasks) * 100);
 
               return (
-              <div key={project.id} className={`rounded-xl border border-slate-200/95 p-3.5 shadow-sm ${projectSurface(project.status)}`}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold text-slate-900">{project.title}</p>
-                  {projectStatusBadge(project.status)}
-                </div>
-                <p className="mt-1 text-sm text-slate-600 line-clamp-2">{project.description}</p>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                  <span className="inline-flex items-center gap-1">
-                    <FiCalendar className="text-[11px]" />
-                    Echeance: {project.deadline ? new Date(project.deadline).toLocaleDateString() : "-"}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <FiUser className="text-[11px]" />
-                    Assigne a: {project.assignedTo ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}` : "-"}
-                  </span>
-                </div>
-                <div className="mt-3 rounded-lg border border-slate-200/80 bg-white/75 px-3 py-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
+                <div key={project.id} className={`rounded-xl border border-slate-200 p-3.5 shadow-sm ${projectSurface(project.status)}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold text-slate-900">{project.title}</p>
+                    {projectStatusBadge(project.status)}
+                  </div>
+                  <p className="mt-1 text-sm text-slate-600 line-clamp-2">{project.description}</p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                     <span className="inline-flex items-center gap-1">
-                      <FiTarget className="text-[11px]" />
-                      Progression
+                      <FiCalendar className="text-[11px]" />
+                      Echeance: {project.deadline ? new Date(project.deadline).toLocaleDateString() : "-"}
                     </span>
-                    <span>{progressPercent}%</span>
+                    <span className="inline-flex items-center gap-1">
+                      <FiUser className="text-[11px]" />
+                      Assigne a: {project.assignedTo ? `${project.assignedTo.firstName} ${project.assignedTo.lastName}` : "-"}
+                    </span>
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-indigo-500"
-                      style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }}
-                    />
+                  <div className="mt-3 rounded-lg border border-slate-200/80 bg-white/75 px-3 py-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
+                      <span className="inline-flex items-center gap-1">
+                        <FiTarget className="text-[11px]" />
+                        Progression
+                      </span>
+                      <span>{progressPercent}%</span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="h-full rounded-full bg-indigo-500"
+                        style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <Link href={`/projects/${project.id}`} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-slate-900">
+                      Voir details
+                      <FiArrowRight className="text-xs" />
+                    </Link>
                   </div>
                 </div>
-                <div className="mt-3">
-                  <Link href={`/projects/${project.id}`} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-slate-900">
-                    Voir details
-                    <FiArrowRight className="text-xs" />
-                  </Link>
-                </div>
-              </div>
-            );
+              );
             })}
           </div>
         </article>
 
-        <article className="rounded-2xl border border-teal-100 bg-[linear-gradient(160deg,#ffffff,#f0fdfa)] p-5 shadow-sm">
+        <article className="app-card p-5">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-slate-900">Taches recentes</h2>
-            <span className="text-xs font-medium text-slate-500">{recentTasks.length}</span>
+            <div className="inline-flex items-center gap-2">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600">
+                <FiCheckSquare className="text-base" />
+              </span>
+              <h2 className="text-lg font-semibold text-slate-900">Taches imminentes</h2>
+            </div>
+            <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-2 text-xs font-semibold text-slate-700">
+              {imminentTasks.length}
+            </span>
           </div>
           <div className="mt-4 space-y-3">
-            {recentTasks.length === 0 && <p className="text-sm text-slate-500">Aucune tache pour le moment.</p>}
-            {recentTasks.map((task) => (
+            {imminentTasks.length === 0 && <p className="text-sm text-slate-500">Aucune tache imminente.</p>}
+            {imminentTasks.map((task) => (
               <div key={task.id} className={`rounded-xl border border-slate-200 p-3.5 ${taskSurface(task.status)}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="font-semibold text-slate-900">{task.title}</p>
                   {taskStatusBadge(task.status)}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                  <span>Projet: {task.project ? task.project.title : "Sans projet"}</span>
-                  <span>
+                  <span className="inline-flex items-center gap-1">
+                    <FiFolder className="text-[11px]" />
+                    Projet: {task.project ? task.project.title : "Sans projet"}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <FiUser className="text-[11px]" />
                     Assignee a: {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "-"}
                   </span>
-                  <span>Deadline: {task.deadline ? new Date(task.deadline).toLocaleDateString() : "-"}</span>
+                  <span className="inline-flex items-center gap-1">
+                    <FiCalendar className="text-[11px]" />
+                    Deadline: {task.deadline ? new Date(task.deadline).toLocaleDateString() : "-"}
+                  </span>
                 </div>
                 <div className="mt-3">
                   <Link href={`/tasks/${task.id}`} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-slate-900">

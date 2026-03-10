@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     tasks: parseDate(request.nextUrl.searchParams.get("tasksSince")) ?? undefined,
     messages: parseDate(request.nextUrl.searchParams.get("messagesSince")) ?? undefined,
     users: parseDate(request.nextUrl.searchParams.get("usersSince")) ?? undefined,
+    files: parseDate(request.nextUrl.searchParams.get("filesSince")) ?? undefined,
   };
 
   const counts = await getNotificationCountsForUser({

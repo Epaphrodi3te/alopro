@@ -272,6 +272,7 @@ export default function TaskAssignmentWorkflowCard({
 
   const showCompletionAlert = reportRequired && normalizedProgress >= 100 && !completedAtLabel;
   const showCompletionReport = Boolean(completionReport.trim()) || Boolean(completedAtLabel);
+  const workflowConfirmed = received && deadlineValidated;
 
   return (
     <section className="app-card p-5">
@@ -291,32 +292,42 @@ export default function TaskAssignmentWorkflowCard({
           {isAssignee ? (
             <div className="mt-4 space-y-4">
               <form className="space-y-4" onSubmit={submitWorkflow}>
-                <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={received}
-                    onChange={(event) => handleReceivedChange(event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
-                  <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <FiCheckCircle className="text-emerald-600" />
-                    J&apos;ai recu la tache
-                  </span>
-                </label>
+                {!workflowConfirmed && (
+                  <>
+                    <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={received}
+                        onChange={(event) => handleReceivedChange(event.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <FiCheckCircle className="text-emerald-600" />
+                        J&apos;ai recu la tache
+                      </span>
+                    </label>
 
-                <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={deadlineValidated}
-                    disabled={!received}
-                    onChange={(event) => handleDeadlineValidatedChange(event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
-                  <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <FiClock className="text-indigo-600" />
-                    La date de fin me convient
-                  </span>
-                </label>
+                    <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={deadlineValidated}
+                        disabled={!received}
+                        onChange={(event) => handleDeadlineValidatedChange(event.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <FiClock className="text-indigo-600" />
+                        La date de fin me convient
+                      </span>
+                    </label>
+                  </>
+                )}
+
+                {workflowConfirmed && (
+                  <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+                    Reception et date confirmees. Mettez maintenant a jour la progression.
+                  </p>
+                )}
 
                 <div className="rounded-xl border border-slate-200 bg-white p-3">
                   <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.08em] text-slate-500">
@@ -350,28 +361,30 @@ export default function TaskAssignmentWorkflowCard({
                 </button>
               </form>
 
-              <form className="space-y-3 rounded-xl border border-slate-200 bg-white p-3" onSubmit={submitDeadlineRequest}>
-                <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.08em] text-slate-500">
-                  <FiCalendar />
-                  Demander une nouvelle date de fin
-                </p>
-                <input
-                  type="date"
-                  value={requestDate}
-                  onChange={(event) => setRequestDate(event.target.value)}
-                  className="app-input"
-                />
-                <textarea
-                  value={requestReason}
-                  onChange={(event) => setRequestReason(event.target.value)}
-                  placeholder="Raison de la demande..."
-                  className="app-textarea"
-                  rows={3}
-                />
-                <button type="submit" disabled={loading} className="app-btn-outline">
-                  Envoyer la demande
-                </button>
-              </form>
+              {!workflowConfirmed && (
+                <form className="space-y-3 rounded-xl border border-slate-200 bg-white p-3" onSubmit={submitDeadlineRequest}>
+                  <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.08em] text-slate-500">
+                    <FiCalendar />
+                    Demander une nouvelle date de fin
+                  </p>
+                  <input
+                    type="date"
+                    value={requestDate}
+                    onChange={(event) => setRequestDate(event.target.value)}
+                    className="app-input"
+                  />
+                  <textarea
+                    value={requestReason}
+                    onChange={(event) => setRequestReason(event.target.value)}
+                    placeholder="Raison de la demande..."
+                    className="app-textarea"
+                    rows={3}
+                  />
+                  <button type="submit" disabled={loading} className="app-btn-outline">
+                    Envoyer la demande
+                  </button>
+                </form>
+              )}
 
               {showCompletionAlert && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">

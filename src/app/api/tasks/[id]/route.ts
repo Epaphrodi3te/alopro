@@ -78,6 +78,11 @@ export async function PUT(request: NextRequest, { params }: Params) {
           id: true,
           createdById: true,
           assignedToId: true,
+          memberships: {
+            select: {
+              userId: true,
+            },
+          },
           createdBy: {
             select: {
               role: true,
@@ -102,6 +107,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
           ? {
               createdById: task.project.createdById,
               assignedToId: task.project.assignedToId,
+              assignedMemberIds: task.project.memberships.map((member) => member.userId),
               createdByRole: task.project.createdBy.role,
             }
           : null,
@@ -112,7 +118,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
   }
 
   const managedByCurrentManager =
-    !!task.project && (task.project.createdById === current.id || task.project.assignedToId === current.id);
+    !!task.project &&
+    (task.project.createdById === current.id ||
+      task.project.assignedToId === current.id ||
+      task.project.memberships.some((member) => member.userId === current.id));
 
   if (!canEditTask(current, task, managedByCurrentManager)) {
     return apiError("Forbidden", 403);
@@ -409,6 +418,11 @@ export async function DELETE(request: NextRequest, { params }: Params) {
           id: true,
           createdById: true,
           assignedToId: true,
+          memberships: {
+            select: {
+              userId: true,
+            },
+          },
           createdBy: {
             select: {
               role: true,
@@ -432,6 +446,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
           ? {
               createdById: task.project.createdById,
               assignedToId: task.project.assignedToId,
+              assignedMemberIds: task.project.memberships.map((member) => member.userId),
               createdByRole: task.project.createdBy.role,
             }
           : null,

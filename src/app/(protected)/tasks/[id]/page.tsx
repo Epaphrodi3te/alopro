@@ -55,6 +55,11 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
           deadline: true,
           createdById: true,
           assignedToId: true,
+          memberships: {
+            select: {
+              userId: true,
+            },
+          },
           createdBy: {
             select: {
               role: true,
@@ -94,6 +99,7 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
         ? {
             createdById: task.project.createdById,
             assignedToId: task.project.assignedToId,
+            assignedMemberIds: task.project.memberships.map((member) => member.userId),
             createdByRole: task.project.createdBy.role,
           }
         : null,

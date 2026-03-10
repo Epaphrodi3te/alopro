@@ -20,9 +20,7 @@ export default async function MessagesPage() {
 
   const [messages, users] = await Promise.all([
     prisma.message.findMany({
-      where: {
-        senderId: user.id,
-      },
+      where: user.role === "admin" ? undefined : { senderId: user.id },
       orderBy: { createdAt: "desc" },
       include: {
         sender: {
@@ -76,7 +74,7 @@ export default async function MessagesPage() {
         </Link>
       </section>
 
-      <MessagesPanel messages={messages} users={users} view="list" />
+      <MessagesPanel messages={messages} users={users} role={user.role} view="list" />
     </div>
   );
 }

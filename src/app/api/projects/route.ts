@@ -15,6 +15,7 @@ const createProjectSchema = z.object({
   deadline: z.string().optional().or(z.literal("")),
   status: z.enum(PROJECT_STATUS_OPTIONS).optional(),
   assignedToId: z.string().cuid().optional().or(z.literal("")),
+  assignedMemberIds: z.array(z.string().cuid()).optional(),
   reportRequired: z.boolean().optional(),
   commissionCfa: z.union([z.number().int().min(0), z.string().trim().regex(/^\d+$/), z.literal(""), z.null()]).optional(),
 });
@@ -84,6 +85,18 @@ export async function GET(request: NextRequest) {
           role: true,
         },
       },
+      memberships: {
+        select: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
+        },
+      },
       _count: {
         select: { tasks: true },
       },
@@ -111,29 +124,41 @@ export async function POST(request: NextRequest) {
       return apiError("Donnees de projet invalides.", 400);
     }
 
-    let assignedToId: string | null = null;
+    const requestedMemberIds = new Set<string>();
     const reportRequired = user.role === "admin" ? Boolean(parsed.data.reportRequired) : false;
 
     if (user.role === "agent") {
       // Agents cannot assign projects to others; their own creations are auto-assigned to them.
-      assignedToId = user.id;
+      requestedMemberIds.add(user.id);
     }
 
-    if (canAssignProject(user.role) && parsed.data.assignedToId) {
-      const assignee = await prisma.user.findUnique({
-        where: { id: parsed.data.assignedToId },
+    if (canAssignProject(user.role)) {
+      if (parsed.data.assignedToId) {
+        requestedMemberIds.add(parsed.data.assignedToId);
+      }
+
+      for (const memberId of parsed.data.assignedMemberIds ?? []) {
+        requestedMemberIds.add(memberId);
+      }
+    }
+
+    const assignedMemberIds = Array.from(requestedMemberIds);
+
+    if (assignedMemberIds.length > 0 && canAssignProject(user.role)) {
+      const assignees = await prisma.user.findMany({
+        where: { id: { in: assignedMemberIds } },
         select: { id: true, role: true },
       });
 
-      if (!assignee) {
-        return apiError("Utilisateur a assigner introuvable.", 404);
+      if (assignees.length !== assignedMemberIds.length) {
+        return apiError("Un ou plusieurs utilisateurs a assigner sont introuvables.", 404);
       }
 
-      if (!canAssignProjectToRole(user.role, assignee.role)) {
-        return apiError("Role d'assignation non autorise pour ce projet.", 400);
+      for (const assignee of assignees) {
+        if (!canAssignProjectToRole(user.role, assignee.role)) {
+          return apiError("Role d'assignation non autorise pour ce projet.", 400);
+        }
       }
-
-      assignedToId = assignee.id;
     }
 
     const project = await prisma.project.create({
@@ -144,7 +169,15 @@ export async function POST(request: NextRequest) {
         deadline: parseDate(parsed.data.deadline),
         status: parsed.data.status ?? "pending",
         createdById: user.id,
-        assignedToId,
+        assignedToId: assignedMemberIds[0] ?? null,
+        memberships:
+          assignedMemberIds.length > 0
+            ? {
+                create: assignedMemberIds.map((memberId) => ({
+                  userId: memberId,
+                })),
+              }
+            : undefined,
         reportRequired,
         progressPercent: 0,
       },
@@ -168,6 +201,18 @@ export async function POST(request: NextRequest) {
             firstName: true,
             lastName: true,
             role: true,
+          },
+        },
+        memberships: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                role: true,
+              },
+            },
           },
         },
         _count: {
