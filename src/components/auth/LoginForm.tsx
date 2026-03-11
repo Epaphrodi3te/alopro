@@ -9,8 +9,8 @@ import { extractApiError, showError, showSuccess } from "@/components/ui/notify"
 export default function LoginForm() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("admin@alopro.com");
-  const [password, setPassword] = useState("Admin@1234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -46,39 +46,45 @@ export default function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="form-grid">
+    <form onSubmit={handleSubmit} className="form-grid" autoComplete="off">
+      <input type="text" name="fake-username" autoComplete="username" className="hidden" tabIndex={-1} />
+      <input type="password" name="fake-password" autoComplete="new-password" className="hidden" tabIndex={-1} />
       <div className="form-field">
-        <label htmlFor="email" className="field-label inline-flex items-center gap-1.5">
+        <label htmlFor="login-email" className="field-label inline-flex items-center gap-1.5">
           <FiMail className="text-[0.72rem]" />
           Email
         </label>
         <input
-          id="email"
+          id="login-email"
+          name="login-email"
           type="email"
           required
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           className="app-input"
-          placeholder="admin@alopro.com"
-          autoComplete="email"
+          placeholder="votre.email@entreprise.com"
+          autoComplete="off"
+          data-lpignore="true"
         />
         <p className="field-help">Adresse de connexion de votre compte.</p>
       </div>
 
       <div className="form-field">
-        <label htmlFor="password" className="field-label inline-flex items-center gap-1.5">
+        <label htmlFor="login-password" className="field-label inline-flex items-center gap-1.5">
           <FiLock className="text-[0.72rem]" />
           Mot de passe
         </label>
         <input
-          id="password"
+          id="login-password"
+          name="login-password"
           type="password"
           required
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           className="app-input"
           placeholder="********"
-          autoComplete="current-password"
+          autoComplete="new-password"
+          data-lpignore="true"
         />
         <p className="field-help">Au moins 8 caracteres.</p>
       </div>
