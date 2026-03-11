@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { Role } from "@prisma/client";
 import { useRouter } from "next/navigation";
-import { FiCalendar, FiEdit2, FiEye, FiFilter, FiFolder, FiPlusCircle, FiSearch, FiTrash2, FiTrendingUp, FiUser } from "react-icons/fi";
+import { FiCalendar, FiEdit2, FiEye, FiFilter, FiFolder, FiMoreVertical, FiPlusCircle, FiSearch, FiTrash2, FiTrendingUp, FiUser } from "react-icons/fi";
 import Swal from "sweetalert2";
 
 import Badge from "@/components/ui/Badge";
@@ -359,6 +359,92 @@ export default function TasksPanel({
     }
   };
 
+  const openFiltersModal = async () => {
+    const result = await Swal.fire({
+      title: "Filtres taches",
+      html: `
+        <div class="swal-pro-form">
+          <div class="swal-pro-field">
+            <label class="swal-pro-label" for="swal-task-type-filter">Type de tache</label>
+            <select id="swal-task-type-filter" class="swal2-select">
+              <option value="all" ${projectScopeFilter === "all" ? "selected" : ""}>Toutes</option>
+              <option value="independent" ${projectScopeFilter === "independent" ? "selected" : ""}>Independantes</option>
+              <option value="with_project" ${projectScopeFilter === "with_project" ? "selected" : ""}>Sous projet</option>
+            </select>
+          </div>
+          <div class="swal-pro-field">
+            <label class="swal-pro-label" for="swal-task-status-filter">Statut</label>
+            <select id="swal-task-status-filter" class="swal2-select">
+              <option value="all" ${statusFilter === "all" ? "selected" : ""}>Tous</option>
+              <option value="todo" ${statusFilter === "todo" ? "selected" : ""}>todo</option>
+              <option value="in_progress" ${statusFilter === "in_progress" ? "selected" : ""}>in_progress</option>
+              <option value="done" ${statusFilter === "done" ? "selected" : ""}>done</option>
+            </select>
+          </div>
+          <div class="swal-pro-field">
+            <label class="swal-pro-label" for="swal-task-priority-filter">Priorite</label>
+            <select id="swal-task-priority-filter" class="swal2-select">
+              <option value="all" ${priorityFilter === "all" ? "selected" : ""}>Toutes</option>
+              <option value="high" ${priorityFilter === "high" ? "selected" : ""}>high</option>
+              <option value="medium" ${priorityFilter === "medium" ? "selected" : ""}>medium</option>
+              <option value="low" ${priorityFilter === "low" ? "selected" : ""}>low</option>
+            </select>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: "Appliquer",
+      denyButtonText: "Reinitialiser",
+      cancelButtonText: "Annuler",
+      buttonsStyling: false,
+      customClass: {
+        popup: "swal-pro-modal",
+        title: "swal-pro-title",
+        htmlContainer: "swal-pro-html",
+        confirmButton: "swal-pro-confirm",
+        denyButton: "swal-pro-cancel",
+        cancelButton: "swal-pro-cancel",
+      },
+      preConfirm: () => {
+        const nextProjectScopeFilter = (document.getElementById("swal-task-type-filter") as HTMLSelectElement | null)?.value;
+        const nextStatusFilter = (document.getElementById("swal-task-status-filter") as HTMLSelectElement | null)?.value;
+        const nextPriorityFilter = (document.getElementById("swal-task-priority-filter") as HTMLSelectElement | null)?.value;
+
+        if (!nextProjectScopeFilter || !nextStatusFilter || !nextPriorityFilter) {
+          Swal.showValidationMessage("Selectionnez tous les filtres.");
+          return;
+        }
+
+        return {
+          projectScope: nextProjectScopeFilter as typeof projectScopeFilter,
+          status: nextStatusFilter as typeof statusFilter,
+          priority: nextPriorityFilter as typeof priorityFilter,
+        };
+      },
+    });
+
+    if (result.isDenied) {
+      setProjectScopeFilter("all");
+      setStatusFilter("all");
+      setPriorityFilter("all");
+      return;
+    }
+
+    if (!result.isConfirmed || !result.value) {
+      return;
+    }
+
+    setProjectScopeFilter(result.value.projectScope);
+    setStatusFilter(result.value.status);
+    setPriorityFilter(result.value.priority);
+  };
+
+  const activeFiltersCount =
+    Number(projectScopeFilter !== "all") +
+    Number(statusFilter !== "all") +
+    Number(priorityFilter !== "all");
+
   return (
     <div className="space-y-6">
       {showCreate && (
@@ -504,8 +590,8 @@ export default function TasksPanel({
       {showList && (
         <section className="space-y-3">
           <article className="app-card p-4">
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="min-w-[240px] flex-1">
+            <div className="flex items-end gap-2">
+              <div className="min-w-0 flex-1">
                 <label htmlFor="tasks-search" className="field-label">Recherche rapide</label>
                 <div className="relative mt-1">
                   <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -514,70 +600,26 @@ export default function TasksPanel({
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Titre, description, projet, assignee..."
-                    className="app-input pl-10"
+                    className="app-input app-input-with-icon"
                   />
                 </div>
               </div>
-
-              <div className="min-w-[170px]">
-                <label htmlFor="tasks-type-filter" className="field-label">Type de tache</label>
-                <select
-                  id="tasks-type-filter"
-                  value={projectScopeFilter}
-                  onChange={(event) => setProjectScopeFilter(event.target.value as typeof projectScopeFilter)}
-                  className="app-select mt-1"
-                >
-                  <option value="all">Toutes</option>
-                  <option value="independent">Independantes</option>
-                  <option value="with_project">Sous projet</option>
-                </select>
-              </div>
-
-              <div className="min-w-[150px]">
-                <label htmlFor="tasks-status-filter" className="field-label">Statut</label>
-                <select
-                  id="tasks-status-filter"
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-                  className="app-select mt-1"
-                >
-                  <option value="all">Tous</option>
-                  <option value="todo">todo</option>
-                  <option value="in_progress">in_progress</option>
-                  <option value="done">done</option>
-                </select>
-              </div>
-
-              <div className="min-w-[150px]">
-                <label htmlFor="tasks-priority-filter" className="field-label">Priorite</label>
-                <select
-                  id="tasks-priority-filter"
-                  value={priorityFilter}
-                  onChange={(event) => setPriorityFilter(event.target.value as typeof priorityFilter)}
-                  className="app-select mt-1"
-                >
-                  <option value="all">Toutes</option>
-                  <option value="high">high</option>
-                  <option value="medium">medium</option>
-                  <option value="low">low</option>
-                </select>
-              </div>
-
-              {(searchQuery || statusFilter !== "all" || priorityFilter !== "all" || projectScopeFilter !== "all") && (
+              <div className="shrink-0">
+                <label className="field-label">Filtres</label>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setStatusFilter("all");
-                    setPriorityFilter("all");
-                    setProjectScopeFilter("all");
-                  }}
-                  className="app-btn-outline"
+                  onClick={openFiltersModal}
+                  className="app-btn-outline mt-1 h-11 px-3"
+                  aria-label="Ouvrir les filtres des taches"
                 >
-                  <FiFilter className="text-sm" />
-                  Reinitialiser
+                  <FiFilter className="text-base" />
+                  {activeFiltersCount > 0 && (
+                    <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                      {activeFiltersCount}
+                    </span>
+                  )}
                 </button>
-              )}
+              </div>
             </div>
 
             <p className="mt-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
@@ -600,9 +642,55 @@ export default function TasksPanel({
           {filteredTasks.map((task) => (
             <article
               key={task.id}
-              className="group rounded-2xl border border-slate-200 bg-[linear-gradient(165deg,#ffffff,#f8fafc_85%)] p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+              className="group rounded-2xl border border-slate-200 bg-[linear-gradient(165deg,#ffffff,#f8fafc_85%)] p-3.5 shadow-sm transition hover:border-indigo-200 hover:shadow-md sm:p-4"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="sm:hidden mobile-mini-card">
+                <div className="mobile-mini-main">
+                  <span className="mobile-mini-avatar mobile-mini-avatar-task">
+                    <FiFolder className="text-[12px]" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="mobile-mini-title truncate">{task.title}</p>
+                    <div className="mobile-mini-chips">
+                      <span className="mobile-mini-chip">{task.status}</span>
+                      <span className="mobile-mini-chip mobile-mini-chip-progress">
+                        <FiTrendingUp className="text-[11px]" />
+                        {task.progressPercent}%
+                      </span>
+                      <span className="mobile-mini-chip">
+                        <FiCalendar className="text-[11px]" />
+                        {formatDate(task.deadline)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <details className="mobile-kebab">
+                  <summary className="mobile-kebab-summary">
+                    <FiMoreVertical className="text-sm" />
+                  </summary>
+                  <div className="mobile-kebab-menu">
+                    <Link href={`/tasks/${task.id}`} className="mobile-kebab-item">
+                      <FiEye className="text-xs" />
+                      Voir details
+                    </Link>
+                    <button type="button" onClick={() => editTask(task)} className="mobile-kebab-item">
+                      <FiEdit2 className="text-xs" />
+                      Modifier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteTask(task)}
+                      disabled={role !== "admin"}
+                      className="mobile-kebab-item mobile-kebab-item-danger disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <FiTrash2 className="text-xs" />
+                      Supprimer
+                    </button>
+                  </div>
+                </details>
+              </div>
+
+              <div className="hidden sm:flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-700">
                     <FiFolder />
@@ -616,15 +704,15 @@ export default function TasksPanel({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/tasks/${task.id}`} className="app-btn-primary">
+                <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+                  <Link href={`/tasks/${task.id}`} className="app-btn-primary text-xs sm:text-sm">
                     <FiEye className="text-xs" />
                     Voir details
                   </Link>
                   <button
                     type="button"
                     onClick={() => editTask(task)}
-                    className="app-btn-soft"
+                    className="app-btn-soft text-xs sm:text-sm"
                   >
                     <FiEdit2 className="text-xs" />
                     Modifier
@@ -633,7 +721,7 @@ export default function TasksPanel({
                     type="button"
                     onClick={() => deleteTask(task)}
                     disabled={role !== "admin"}
-                    className="app-btn-danger"
+                    className="app-btn-danger text-xs sm:text-sm"
                   >
                     <FiTrash2 className="text-xs" />
                     Supprimer
@@ -641,7 +729,7 @@ export default function TasksPanel({
                 </div>
               </div>
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-4">
+              <div className="mt-3 hidden grid-cols-2 gap-2 sm:grid sm:grid-cols-4">
                 <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
                   <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     <FiUser />

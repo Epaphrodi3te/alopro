@@ -13,6 +13,7 @@ import {
   FiEye,
   FiInbox,
   FiMail,
+  FiMoreVertical,
   FiSearch,
   FiSend,
   FiTrash2,
@@ -318,7 +319,7 @@ export default function MessagesPanel({
                       value={receiverQuery}
                       onChange={(event) => setReceiverQuery(event.target.value)}
                       placeholder="Rechercher par nom ou role..."
-                      className="app-input pl-10"
+                      className="app-input app-input-with-icon"
                     />
                   </div>
 
@@ -555,71 +556,119 @@ export default function MessagesPanel({
             </div>
           ) : (
             <>
-              {paginatedMessages.map((message) => (
-                (() => {
-                  const isOutgoing = message.sender.id === currentUserId;
-                  const counterpart = isOutgoing ? message.receiver : message.sender;
+              {paginatedMessages.map((message) => {
+                const isOutgoing = message.sender.id === currentUserId;
+                const counterpart = isOutgoing ? message.receiver : message.sender;
 
-                  return (
-                <article
-                  key={message.id}
-                  className={`message-thread-card ${isOutgoing ? "message-thread-card-out" : "message-thread-card-in"}`}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className={`message-thread-avatar ${isOutgoing ? "message-thread-avatar-out" : "message-thread-avatar-in"}`}>
-                        {counterpart.firstName.charAt(0)}
-                        {counterpart.lastName.charAt(0)}
-                      </span>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-bold text-slate-900">
+                return (
+                  <article
+                    key={message.id}
+                    className={`message-thread-card ${isOutgoing ? "message-thread-card-out" : "message-thread-card-in"}`}
+                  >
+                    <div className="sm:hidden mobile-mini-card">
+                      <div className="mobile-mini-main">
+                        <span className="mobile-mini-avatar mobile-mini-avatar-message">
+                          <FiMail className="text-[12px]" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="mobile-mini-title truncate">
                             {counterpart.firstName} {counterpart.lastName}
                           </p>
-                          <Badge label={isOutgoing ? "email envoye" : "message recu"} variant={isOutgoing ? "progress" : "pending"} />
+                          <div className="mobile-mini-chips">
+                            <span className="mobile-mini-chip">{counterpart.role}</span>
+                            <span className="mobile-mini-chip">
+                              <FiClock className="text-[11px]" />
+                              {new Date(message.createdAt).toLocaleDateString()}
+                            </span>
+                            <span className={`mobile-mini-chip ${isOutgoing ? "mobile-mini-chip-progress" : ""}`}>
+                              {isOutgoing ? "envoye" : "recu"}
+                            </span>
+                          </div>
                         </div>
-                        <p className="mt-1 text-xs font-medium text-slate-500">
-                          {isOutgoing
-                            ? `De ${message.sender.firstName} ${message.sender.lastName} a ${message.receiver.firstName} ${message.receiver.lastName}`
-                            : `De ${message.sender.firstName} ${message.sender.lastName} vers vous`}
+                      </div>
+                      <details className="mobile-kebab">
+                        <summary className="mobile-kebab-summary">
+                          <FiMoreVertical className="text-sm" />
+                        </summary>
+                        <div className="mobile-kebab-menu">
+                          <button
+                            type="button"
+                            onClick={() => openMessagePreview(message)}
+                            className="mobile-kebab-item"
+                          >
+                            <FiEye className="text-xs" />
+                            Voir le message
+                          </button>
+                          {role === "admin" && (
+                            <button
+                              type="button"
+                              onClick={() => deleteMessage(message.id)}
+                              className="mobile-kebab-item mobile-kebab-item-danger"
+                            >
+                              <FiTrash2 className="text-xs" />
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
+                      </details>
+                    </div>
+
+                    <div className="hidden sm:block">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className={`message-thread-avatar ${isOutgoing ? "message-thread-avatar-out" : "message-thread-avatar-in"}`}>
+                            {counterpart.firstName.charAt(0)}
+                            {counterpart.lastName.charAt(0)}
+                          </span>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-bold text-slate-900">
+                                {counterpart.firstName} {counterpart.lastName}
+                              </p>
+                              <Badge label={isOutgoing ? "email envoye" : "message recu"} variant={isOutgoing ? "progress" : "pending"} />
+                            </div>
+                            <p className="mt-1 text-xs font-medium text-slate-500">
+                              {isOutgoing
+                                ? `De ${message.sender.firstName} ${message.sender.lastName} a ${message.receiver.firstName} ${message.receiver.lastName}`
+                                : `De ${message.sender.firstName} ${message.sender.lastName} vers vous`}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                          {new Date(message.createdAt).toLocaleString()}
                         </p>
                       </div>
-                    </div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                      {new Date(message.createdAt).toLocaleString()}
-                    </p>
-                  </div>
 
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm text-slate-500">
-                      Le contenu est masque ici pour garder un historique plus
-                      propre.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openMessagePreview(message)}
-                        className="border border-gray-200 hover:bg-slate-200 inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium"
-                      >
-                        <FiEye className="text-sm" />
-                        Voir le message
-                      </button>
-                      {role === "admin" && (
-                        <button
-                          type="button"
-                          onClick={() => deleteMessage(message.id)}
-                          className="app-btn-danger"
-                        >
-                          <FiTrash2 className="text-sm" />
-                          Supprimer
-                        </button>
-                      )}
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm text-slate-500">
+                          Le contenu est masque ici pour garder un historique plus
+                          propre.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openMessagePreview(message)}
+                            className="border border-gray-200 hover:bg-slate-200 inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-medium"
+                          >
+                            <FiEye className="text-sm" />
+                            Voir le message
+                          </button>
+                          {role === "admin" && (
+                            <button
+                              type="button"
+                              onClick={() => deleteMessage(message.id)}
+                              className="app-btn-danger"
+                            >
+                              <FiTrash2 className="text-sm" />
+                              Supprimer
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </article>
-                  );
-                })()
-              ))}
+                  </article>
+                );
+              })}
 
               <div className="message-pagination">
                 <p className="text-sm text-slate-500">

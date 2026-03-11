@@ -83,6 +83,10 @@ button {
   padding: 0.65rem 0.9rem;
 }
 
+.app-input-with-icon {
+  padding-left: 2.6rem;
+}
+
 .app-textarea {
   padding: 0.72rem 0.9rem;
   resize: vertical;
@@ -126,11 +130,21 @@ button {
   gap: 0.45rem;
   border-radius: 0.85rem;
   border: 0;
-  padding: 0.68rem 1rem;
-  font-size: 0.84rem;
+  padding: 0.58rem 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   transition: transform 140ms ease, filter 140ms ease, box-shadow 140ms ease;
+}
+
+@media (min-width: 640px) {
+  .app-btn-primary,
+  .app-btn-danger,
+  .app-btn-soft,
+  .app-btn-outline {
+    padding: 0.68rem 1rem;
+    font-size: 0.84rem;
+  }
 }
 
 .app-btn-primary:hover,
@@ -970,4 +984,158 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   font-weight: 700;
+}
+
+@media (max-width: 639px) {
+  .mobile-mini-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.65rem;
+    border: 1px solid #dbe6f3;
+    border-radius: 0.95rem;
+    background: linear-gradient(160deg, #ffffff, #f2f7ff 82%);
+    box-shadow: 0 14px 34px -28px rgba(15, 23, 42, 0.55);
+    padding: 0.62rem 0.68rem;
+  }
+
+  .mobile-mini-main {
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    flex: 1;
+  }
+
+  .mobile-mini-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.68rem;
+    border: 1px solid #d5e1f0;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .mobile-mini-avatar-user {
+    background: linear-gradient(135deg, #334155, #0f172a);
+  }
+
+  .mobile-mini-avatar-project {
+    background: linear-gradient(135deg, #1d4ed8, #0f766e);
+  }
+
+  .mobile-mini-avatar-task {
+    background: linear-gradient(135deg, #2563eb, #4338ca);
+  }
+
+  .mobile-mini-avatar-message {
+    background: linear-gradient(135deg, #0f766e, #0891b2);
+  }
+
+  .mobile-mini-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 0.84rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .mobile-mini-chips {
+    margin-top: 0.28rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.28rem;
+  }
+
+  .mobile-mini-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    max-width: 100%;
+    border-radius: 999px;
+    border: 1px solid #d5e0ee;
+    background: #ffffff;
+    color: #475569;
+    font-size: 0.64rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.24rem 0.42rem;
+  }
+
+  .mobile-mini-chip-role {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
+
+  .mobile-mini-chip-progress {
+    border-color: #bae6fd;
+    background: #ecfeff;
+    color: #0e7490;
+  }
+
+  .mobile-kebab {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .mobile-kebab-summary {
+    display: flex;
+    height: 2rem;
+    width: 2rem;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.65rem;
+    border: 1px solid #d5e0ee;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+    color: #475569;
+    box-shadow: 0 8px 20px -18px rgba(15, 23, 42, 0.7);
+  }
+
+  .mobile-kebab-menu {
+    position: absolute;
+    right: 0;
+    z-index: 20;
+    margin-top: 0.24rem;
+    width: 10rem;
+    overflow: hidden;
+    border-radius: 0.82rem;
+    border: 1px solid #d8e3ef;
+    background: #ffffff;
+    padding: 0.24rem;
+    box-shadow: 0 16px 32px -20px rgba(15, 23, 42, 0.85);
+  }
+
+  .mobile-kebab-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 0.55rem;
+    padding: 0.42rem 0.5rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #334155;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+
+  .mobile-kebab-item:hover {
+    background: #f1f5f9;
+  }
+
+  .mobile-kebab-item-danger {
+    color: #be123c;
+  }
+
+  .mobile-kebab-item-danger:hover {
+    background: #fff1f2;
+  }
 }
