@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiCalendar, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiMail, FiPlusCircle, FiShield, FiTrash2, FiUser, FiUserPlus } from "react-icons/fi";
+import { FiCalendar, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiMail, FiMoreVertical, FiPlusCircle, FiShield, FiTrash2, FiUser, FiUserPlus } from "react-icons/fi";
 import Swal from "sweetalert2";
 
 import Badge from "@/components/ui/Badge";
@@ -405,9 +405,55 @@ export default function UsersPanel({
           {paginatedUsers.map((user) => (
             <article
               key={user.id}
-              className="group rounded-2xl border border-slate-200 bg-[linear-gradient(165deg,#ffffff,#f8fafc_85%)] p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+              className="group rounded-2xl border border-slate-200 bg-[linear-gradient(165deg,#ffffff,#f8fafc_85%)] p-3.5 shadow-sm transition hover:border-indigo-200 hover:shadow-md sm:p-4"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="sm:hidden mobile-mini-card">
+                <div className="mobile-mini-main">
+                  <span className="mobile-mini-avatar mobile-mini-avatar-user">
+                    {user.firstName.charAt(0)}
+                    {user.lastName.charAt(0)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="mobile-mini-title truncate">{user.firstName} {user.lastName}</p>
+                    <div className="mobile-mini-chips">
+                      <span className="mobile-mini-chip mobile-mini-chip-role">
+                        <FiUser className="text-[11px]" />
+                        {roleLabel(user.role)}
+                      </span>
+                      <span className="mobile-mini-chip truncate">
+                        <FiMail className="text-[11px]" />
+                        {user.email}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <details className="mobile-kebab">
+                  <summary className="mobile-kebab-summary">
+                    <FiMoreVertical className="text-sm" />
+                  </summary>
+                  <div className="mobile-kebab-menu">
+                    <Link href={`/users/${user.id}`} className="mobile-kebab-item">
+                      <FiEye className="text-xs" />
+                      Voir details
+                    </Link>
+                    <button type="button" onClick={() => editUser(user)} className="mobile-kebab-item">
+                      <FiEdit2 className="text-xs" />
+                      Modifier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteUser(user)}
+                      disabled={user.id === currentUserId}
+                      className="mobile-kebab-item mobile-kebab-item-danger disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <FiTrash2 className="text-xs" />
+                      Supprimer
+                    </button>
+                  </div>
+                </details>
+              </div>
+
+              <div className="hidden sm:flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-700">
                     <FiUser />
@@ -416,15 +462,15 @@ export default function UsersPanel({
                   <p className="mt-2 truncate text-base font-semibold text-slate-900">{user.firstName} {user.lastName}</p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/users/${user.id}`} className="app-btn-primary">
+                <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+                  <Link href={`/users/${user.id}`} className="app-btn-primary text-xs sm:text-sm">
                     <FiEye className="text-xs" />
                     Voir details
                   </Link>
                   <button
                     type="button"
                     onClick={() => editUser(user)}
-                    className="app-btn-soft"
+                    className="app-btn-soft text-xs sm:text-sm"
                   >
                     <FiEdit2 className="text-xs" />
                     Modifier
@@ -433,7 +479,7 @@ export default function UsersPanel({
                     type="button"
                     onClick={() => deleteUser(user)}
                     disabled={user.id === currentUserId}
-                    className="app-btn-danger"
+                    className="app-btn-danger text-xs sm:text-sm"
                   >
                     <FiTrash2 className="text-xs" />
                     Supprimer
@@ -441,7 +487,7 @@ export default function UsersPanel({
                 </div>
               </div>
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <div className="mt-3 hidden grid-cols-2 gap-2 sm:grid sm:grid-cols-3">
                 <div className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
                   <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     <FiUser />

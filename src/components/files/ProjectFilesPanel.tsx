@@ -78,19 +78,19 @@ export default function ProjectFilesPanel({ files }: ProjectFilesPanelProps) {
               <p className="mt-1 truncate text-xs text-slate-500">Original: {file.originalName}</p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <a href={`/api/project-files/${file.id}/download`} className="app-btn-outline inline-flex items-center gap-1.5">
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+              <a href={`/api/project-files/${file.id}/download`} className="app-btn-outline inline-flex items-center gap-1.5 text-xs sm:text-sm">
                 <FiDownload className="text-sm" />
                 Telecharger
               </a>
-              <button type="button" onClick={() => deleteFile(file.id)} className="app-btn-danger">
+              <button type="button" onClick={() => deleteFile(file.id)} className="app-btn-danger text-xs sm:text-sm">
                 <FiTrash2 className="text-sm" />
                 Supprimer
               </button>
             </div>
           </div>
 
-          <div className="mt-3 grid gap-2 sm:grid-cols-4">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
               <p className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                 <FiFolder />
@@ -123,7 +123,7 @@ export default function ProjectFilesPanel({ files }: ProjectFilesPanelProps) {
                 <FiCalendar />
                 Date
               </p>
-              <p className="mt-1 text-sm font-semibold text-slate-800">{new Date(file.createdAt).toLocaleString()}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-800 sm:text-sm">{new Date(file.createdAt).toLocaleString()}</p>
             </div>
           </div>
         </article>

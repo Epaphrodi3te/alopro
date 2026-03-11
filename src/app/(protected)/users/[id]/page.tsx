@@ -163,22 +163,22 @@ export default async function UserDetailsPage({ params }: UserDetailsPageProps) 
           </div>
         </article>
 
-        <aside className="space-y-3">
+        <aside className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
           <div className="app-card p-4">
             <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Projets crees</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{user._count.createdProjects}</p>
+            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{user._count.createdProjects}</p>
           </div>
           <div className="app-card p-4">
             <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Projets assignes</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{user._count.assignedProjects}</p>
+            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{user._count.assignedProjects}</p>
           </div>
           <div className="app-card p-4">
             <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Taches assignees</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{user._count.assignedTasks}</p>
+            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{user._count.assignedTasks}</p>
           </div>
           <div className="app-card p-4">
             <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Messages recus</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{user._count.receivedMessages}</p>
+            <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{user._count.receivedMessages}</p>
           </div>
         </aside>
       </section>

@@ -91,9 +91,6 @@ export default async function TasksPage() {
             Gestion taches
           </p>
           <h1 className="page-title text-slate-900">Taches</h1>
-          <p className="page-subtitle">
-            Liste complete des taches. Cliquez sur Nouveau pour ouvrir le formulaire de creation.
-          </p>
         </div>
         <Link href="/tasks/new" className="app-btn-primary">
           <FiPlus className="text-sm" />

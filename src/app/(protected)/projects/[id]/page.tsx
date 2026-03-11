@@ -218,13 +218,13 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
         }))}
       />
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
         <article className="app-card p-4">
           <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
             <FiTrendingUp />
             Progression
           </p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{projectProgressPercent}%</p>
+          <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{projectProgressPercent}%</p>
           <div className="mt-3 h-2 rounded-full bg-slate-200">
             <div className="h-full rounded-full bg-slate-900" style={{ width: `${projectProgressPercent}%` }} />
           </div>
@@ -235,7 +235,7 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
             <FiList />
             Taches rattachees
           </p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{totalTasks}</p>
+          <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{totalTasks}</p>
         </article>
 
         <article className="app-card p-4">
@@ -243,7 +243,7 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
             <FiCheckCircle />
             Taches finalisees
           </p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{doneTasks}</p>
+          <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{doneTasks}</p>
         </article>
 
         <article className="app-card p-4">

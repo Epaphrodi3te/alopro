@@ -91,9 +91,6 @@ export default async function ProjectsPage() {
             Gestion projets
           </p>
           <h1 className="page-title text-slate-900">Projets</h1>
-          <p className="page-subtitle">
-            Vue epuree: seul le nom du projet est affiche ici. Utilisez Voir details pour consulter le reste.
-          </p>
         </div>
         <Link href="/projects/new" className="app-btn-primary">
           <FiPlus className="text-sm" />

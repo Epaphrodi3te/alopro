@@ -36,9 +36,6 @@ export default async function UsersPage() {
             Gestion utilisateurs
           </p>
           <h1 className="page-title text-slate-900">Gestion des utilisateurs</h1>
-          <p className="page-subtitle">
-            Liste complete des comptes. Utilisez le bouton Nouveau pour ouvrir le formulaire de creation.
-          </p>
         </div>
         <Link href="/users/new" className="app-btn-primary">
           <FiPlus className="text-sm" />

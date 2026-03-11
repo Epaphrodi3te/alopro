@@ -57,11 +57,6 @@ export default async function MessagesPage() {
             Communication
           </p>
           <h1 className="page-title text-slate-900">Messages</h1>
-          <p className="page-subtitle">
-            {user.role === "agent"
-              ? "Consultez vos messages recus et envoyez seulement aux administrateurs et managers."
-              : "Historique des emails envoyes et recus. Cliquez sur Nouveau pour rediger un email direct."}
-          </p>
         </div>
         {canSendDirectEmail(user.role) && (
           <Link href="/messages/new" className="app-btn-primary">

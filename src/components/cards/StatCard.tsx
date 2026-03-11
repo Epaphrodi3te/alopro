@@ -41,20 +41,20 @@ export default function StatCard({ label, value, icon: Icon, accent = "indigo" }
   const accentClass = accentStyles[accent];
 
   return (
-    <article className={`relative overflow-hidden rounded-2xl border bg-[linear-gradient(160deg,#ffffff,#f8fafc_78%)] p-5 shadow-sm ${accentClass.shell}`}>
+    <article className={`relative overflow-hidden rounded-xl border bg-[linear-gradient(160deg,#ffffff,#f8fafc_78%)] p-3.5 shadow-sm sm:rounded-2xl sm:p-5 ${accentClass.shell}`}>
       <div className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full blur-2xl ${accentClass.pulse}`} />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,rgba(15,23,42,0.08),rgba(15,23,42,0))]" />
 
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
-          <p className="text-3xl font-black tracking-tight text-slate-900">{value}</p>
-          <p className="text-xs font-medium text-slate-500">Actualisation en temps reel</p>
+      <div className="relative flex items-start justify-between gap-2.5 sm:gap-4">
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500 sm:text-[11px] sm:tracking-[0.12em]">{label}</p>
+          <p className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">{value}</p>
+          <p className="hidden text-xs font-medium text-slate-500 sm:block">Actualisation en temps reel</p>
         </div>
 
         {Icon ? (
-          <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl border shadow-sm ${accentClass.icon}`}>
-            <Icon className="text-[1.12rem]" />
+          <span className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm sm:h-12 sm:w-12 sm:rounded-2xl ${accentClass.icon}`}>
+            <Icon className="text-[0.95rem] sm:text-[1.12rem]" />
           </span>
         ) : null}
       </div>

@@ -193,17 +193,17 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-7">
-      <section className="relative overflow-hidden rounded-3xl border border-sky-100 bg-[linear-gradient(145deg,#ffffff,#eef6ff_76%)] p-6 shadow-sm">
+      <section className="relative overflow-hidden rounded-3xl border border-sky-100 bg-[linear-gradient(145deg,#ffffff,#eef6ff_76%)] p-4 shadow-sm sm:p-6">
         <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-sky-100 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 left-[-3rem] h-52 w-52 rounded-full bg-indigo-100/70 blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{roleLabel}</p>
-            <h1 className="mt-2 page-title text-slate-900">Dashboard</h1>
-            <p className="page-subtitle">
+            <p className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 sm:block">{roleLabel}</p>
+            <h1 className="mt-2 hidden page-title text-slate-900 sm:block">Dashboard</h1>
+            <p className="hidden page-subtitle sm:block">
               Pilotez vos priorites avec une vue claire des projets, taches et messages.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 hidden flex-wrap gap-2 sm:flex">
               <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
                 Projets proches de l&apos;echeance (7 jours): {dueSoonProjects}
               </span>
@@ -212,9 +212,9 @@ export default async function DashboardPage() {
               </span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             {quickActions.map((action) => (
-              <Link key={action.href} href={action.href} className="app-btn-outline">
+              <Link key={action.href} href={action.href} className="app-btn-outline flex-1 sm:flex-none">
                 <FiPlus className="text-sm" />
                 {action.label}
               </Link>
@@ -223,7 +223,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Projets visibles" value={projectCount} icon={FiBriefcase} accent="indigo" />
         <StatCard label="Taches visibles" value={taskCount} icon={FiClipboard} accent="emerald" />
         <StatCard label="Messages" value={messageCount} icon={FiMail} accent="amber" />

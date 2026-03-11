@@ -98,12 +98,16 @@ export default function Navbar({
       </div>
 
       <div className="mr-auto min-w-0">
-        <p className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.13em] text-slate-600">
+        <p className="hidden items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.13em] text-slate-600 sm:inline-flex">
           <FiShield className="text-xs" />
           Espace {getRoleLabel(role)}
         </p>
-        <h2 className="mt-2 truncate text-xl font-bold tracking-tight text-slate-900 md:text-2xl">
-          {section} <span className="text-slate-400">|</span> Bonjour, {firstName}
+        <h2 className="mt-2 truncate text-lg font-bold tracking-tight text-slate-900 sm:text-xl md:text-2xl">
+          {section}
+          <span className="hidden sm:inline">
+            {" "}
+            <span className="text-slate-400">|</span> Bonjour, {firstName}
+          </span>
         </h2>
       </div>
 
@@ -111,10 +115,11 @@ export default function Navbar({
         type="button"
         onClick={handleLogout}
         disabled={loading}
-        className="app-btn-primary"
+        className="app-btn-primary text-xs sm:text-sm"
+        aria-label="Se deconnecter"
       >
         <FiLogOut className="text-sm" />
-        {loading ? "Deconnexion..." : "Se deconnecter"}
+        <span className="hidden sm:inline">{loading ? "Deconnexion..." : "Se deconnecter"}</span>
       </button>
     </header>
   );

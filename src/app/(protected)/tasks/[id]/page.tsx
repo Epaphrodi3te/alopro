@@ -141,13 +141,13 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <article className="app-card p-4">
           <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
             <FiTarget />
             Progression
           </p>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{normalizedProgress}%</p>
+          <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{normalizedProgress}%</p>
           <div className="mt-3 h-2 rounded-full bg-slate-200">
             <div className="h-full rounded-full bg-slate-900" style={{ width: `${normalizedProgress}%` }} />
           </div>
