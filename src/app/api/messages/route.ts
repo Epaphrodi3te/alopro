@@ -95,14 +95,19 @@ export async function POST(request: NextRequest) {
 
     try {
       for (const receiver of receivers) {
-        await sendMessageNotificationEmail({
+        const delivered = await sendMessageNotificationEmail({
           receiverEmail: receiver.email,
           receiverName: `${receiver.firstName} ${receiver.lastName}`,
           senderName: `${user.firstName} ${user.lastName}`,
           content: parsed.data.content,
         });
+
+        if (!delivered) {
+          throw new Error(`SMTP rejected recipient ${receiver.email}`);
+        }
       }
-    } catch {
+    } catch (error) {
+      console.error("[messages][smtp] Email delivery failed:", error);
       return apiError("L'envoi de l'email a echoue. Verifiez la configuration SMTP.", 502);
     }
 
