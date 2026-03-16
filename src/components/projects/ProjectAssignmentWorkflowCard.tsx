@@ -4,7 +4,6 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiAlertTriangle, FiCalendar, FiCheckCircle, FiClock, FiTarget, FiTrendingUp } from "react-icons/fi";
 
-import Badge from "@/components/ui/Badge";
 import { extractApiError, showError, showSuccess } from "@/components/ui/notify";
 
 type DeadlineChangeStatus = "none" | "pending" | "approved" | "rejected";
@@ -27,38 +26,6 @@ type ProjectAssignmentWorkflowCardProps = {
   progressDerivedFromTasks: boolean;
   linkedTasksCount: number;
 };
-
-function receiptBadge(received: boolean) {
-  if (received) {
-    return <Badge label="recue" variant="done" />;
-  }
-
-  return <Badge label="en attente" variant="pending" />;
-}
-
-function validationBadge(validated: boolean) {
-  if (validated) {
-    return <Badge label="date validee" variant="progress" />;
-  }
-
-  return <Badge label="date non validee" variant="pending" />;
-}
-
-function deadlineChangeBadge(status: DeadlineChangeStatus) {
-  if (status === "pending") {
-    return <Badge label="nouvelle date en attente" variant="pending" />;
-  }
-
-  if (status === "approved") {
-    return <Badge label="nouvelle date approuvee" variant="done" />;
-  }
-
-  if (status === "rejected") {
-    return <Badge label="nouvelle date refusee" variant="high" />;
-  }
-
-  return <Badge label="aucune demande de date" variant="medium" />;
-}
 
 export default function ProjectAssignmentWorkflowCard({
   projectId,
@@ -291,191 +258,189 @@ export default function ProjectAssignmentWorkflowCard({
   };
 
   const showCompletionAlert = reportRequired && normalizedProgress >= 100 && !completedAtLabel;
-  const showCompletionReport = Boolean(completionReport.trim()) || Boolean(completedAtLabel);
+  const hasCompletionReport = Boolean(completionReport.trim()) || Boolean(completedAtLabel);
   const workflowConfirmed = received && deadlineValidated;
+
+  // Non-assignee: only show completion report if it has content, and deadline review buttons
+  if (!isAssignee) {
+    const hasDeadlineReview = canReviewDeadlineChange && deadlineChangeStatus === "pending";
+    const hasContent = hasCompletionReport || hasDeadlineReview;
+
+    if (!hasContent) return null;
+
+    return (
+      <section className="space-y-3">
+        {hasDeadlineReview && (
+          <div className="app-card p-4">
+            <p className="text-sm font-semibold text-slate-900">Demande de report de deadline</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Nouvelle date: {deadlineChangeRequestedDateLabel} — {deadlineChangeReason || "Aucune raison"}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={() => reviewDeadlineRequest("approved")} disabled={loading} className="app-btn-primary text-sm">
+                Approuver
+              </button>
+              <button type="button" onClick={() => reviewDeadlineRequest("rejected")} disabled={loading} className="app-btn-danger text-sm">
+                Refuser
+              </button>
+            </div>
+          </div>
+        )}
+
+        {hasCompletionReport && completionReport.trim() && (
+          <div className="app-card p-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Compte rendu</p>
+            <p className="mt-2 whitespace-pre-line text-sm text-slate-700">{completionReport}</p>
+            {completedAtLabel && <p className="mt-2 text-xs text-emerald-600">Termine le {completedAtLabel}</p>}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  // Not assigned at all
+  if (!assignedToId) return null;
 
   return (
     <section className="app-card p-5">
-      <h2 className="text-lg font-semibold text-slate-900">Confirmation et progression</h2>
-      <p className="mt-1 text-sm text-slate-500">Date limite proposee: {deadlineLabel}</p>
+      <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+        <FiTarget size={16} className="text-slate-400" />
+        Suivi du projet
+      </h2>
+      <p className="mt-1 text-xs text-slate-500">Deadline: {deadlineLabel}</p>
 
-      {assignedToId ? (
-        <>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {receiptBadge(received)}
-            {validationBadge(deadlineValidated)}
-            <Badge label={`${normalizedProgress}% progression`} variant="medium" />
-            <Badge label={reportRequired ? "compte rendu requis" : "compte rendu non requis"} variant={reportRequired ? "high" : "medium"} />
-            {deadlineChangeBadge(deadlineChangeStatus)}
-          </div>
+      <div className="mt-4 space-y-4">
+        <form className="space-y-3" onSubmit={submitWorkflow}>
+          {!workflowConfirmed && (
+            <>
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={received}
+                  onChange={(event) => handleReceivedChange(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                <span className="inline-flex items-center gap-2 text-sm text-slate-700">
+                  <FiCheckCircle size={14} className="text-emerald-600" />
+                  J&apos;ai recu ce projet
+                </span>
+              </label>
 
-          {isAssignee ? (
-            <div className="mt-4 space-y-4">
-              <form className="space-y-4" onSubmit={submitWorkflow}>
-                {!workflowConfirmed && (
-                  <>
-                    <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={received}
-                        onChange={(event) => handleReceivedChange(event.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300"
-                      />
-                      <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                        <FiCheckCircle className="text-emerald-600" />
-                        J&apos;ai recu ce projet
-                      </span>
-                    </label>
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={deadlineValidated}
+                  disabled={!received}
+                  onChange={(event) => handleDeadlineValidatedChange(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300"
+                />
+                <span className="inline-flex items-center gap-2 text-sm text-slate-700">
+                  <FiClock size={14} className="text-indigo-600" />
+                  La date de fin me convient
+                </span>
+              </label>
+            </>
+          )}
 
-                    <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={deadlineValidated}
-                        disabled={!received}
-                        onChange={(event) => handleDeadlineValidatedChange(event.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300"
-                      />
-                      <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                        <FiClock className="text-indigo-600" />
-                        La date de fin me convient
-                      </span>
-                    </label>
-                  </>
-                )}
-
-                {workflowConfirmed && (
-                  <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
-                    Reception et date confirmees. Mettez maintenant a jour la progression.
-                  </p>
-                )}
-
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
-                  <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.08em] text-slate-500">
-                    <FiTrendingUp />
-                    Niveau de progression
-                  </p>
-
-                  {progressDerivedFromTasks ? (
-                    <p className="mt-2 text-sm text-slate-600">
-                      Progression calculee automatiquement depuis {linkedTasksCount} tache{linkedTasksCount > 1 ? "s" : ""} du projet.
-                    </p>
-                  ) : (
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={normalizedProgress}
-                        disabled={!received || !deadlineValidated}
-                        onChange={(event) => setProgressPercent(Number(event.target.value))}
-                        className="h-2 w-full max-w-xs accent-indigo-600"
-                      />
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={normalizedProgress}
-                        disabled={!received || !deadlineValidated}
-                        onChange={(event) => setProgressPercent(Number(event.target.value))}
-                        className="app-input w-24"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <button type="submit" disabled={loading} className="app-btn-primary">
-                  {loading ? "Mise a jour..." : "Valider le suivi"}
-                </button>
-              </form>
-
-              {!workflowConfirmed && (
-                <form className="space-y-3 rounded-xl border border-slate-200 bg-white p-3" onSubmit={submitDeadlineRequest}>
-                  <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.08em] text-slate-500">
-                    <FiCalendar />
-                    Demander une nouvelle date de fin
-                  </p>
-                  <input
-                    type="date"
-                    value={requestDate}
-                    onChange={(event) => setRequestDate(event.target.value)}
-                    className="app-input"
-                  />
-                  <textarea
-                    value={requestReason}
-                    onChange={(event) => setRequestReason(event.target.value)}
-                    placeholder="Raison de la demande..."
-                    className="app-textarea"
-                    rows={3}
-                  />
-                  <button type="submit" disabled={loading} className="app-btn-outline">
-                    Envoyer la demande
-                  </button>
-                </form>
-              )}
-
-              {showCompletionAlert && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                  <p className="inline-flex items-center gap-2 font-semibold">
-                    <FiAlertTriangle />
-                    Progression a 100%: marquez le projet comme termine.
-                  </p>
-                </div>
-              )}
-
-              {(showCompletionAlert || showCompletionReport || reportRequired) && (
-                <form className="space-y-3 rounded-xl border border-slate-200 bg-white p-3" onSubmit={submitCompletionReport}>
-                  <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <FiTarget />
-                    Compte rendu de finalisation
-                  </p>
-                  <textarea
-                    value={completionReport}
-                    onChange={(event) => setCompletionReport(event.target.value)}
-                    placeholder="Decrivez le resultat final du projet..."
-                    className="app-textarea"
-                    rows={4}
-                  />
-                  <button type="submit" disabled={loading || normalizedProgress < 100} className="app-btn-primary">
-                    Marquer comme termine
-                  </button>
-                </form>
-              )}
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-slate-500">
-              Seul l&apos;utilisateur assigne peut confirmer la reception, valider la date et envoyer la progression.
+          {progressDerivedFromTasks ? (
+            <p className="text-xs text-slate-500">
+              Progression calculee depuis {linkedTasksCount} tache{linkedTasksCount > 1 ? "s" : ""}.
             </p>
-          )}
-
-          {(deadlineChangeStatus !== "none" || deadlineChangeReason || deadlineChangeRequestedDateLabel) && (
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
-              <p><span className="font-semibold">Statut demande date:</span> {deadlineChangeStatus}</p>
-              <p><span className="font-semibold">Nouvelle date demandee:</span> {deadlineChangeRequestedDateLabel || "-"}</p>
-              <p><span className="font-semibold">Raison:</span> {deadlineChangeReason || "-"}</p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                <FiTrendingUp size={12} />
+                Progression
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={normalizedProgress}
+                disabled={!received || !deadlineValidated}
+                onChange={(event) => setProgressPercent(Number(event.target.value))}
+                className="h-2 w-full max-w-xs accent-indigo-600"
+              />
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={normalizedProgress}
+                disabled={!received || !deadlineValidated}
+                onChange={(event) => setProgressPercent(Number(event.target.value))}
+                className="app-input w-20 text-sm"
+              />
             </div>
           )}
 
-          {canReviewDeadlineChange && deadlineChangeStatus === "pending" && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => reviewDeadlineRequest("approved")} disabled={loading} className="app-btn-primary">
-                Approuver la nouvelle date
-              </button>
-              <button type="button" onClick={() => reviewDeadlineRequest("rejected")} disabled={loading} className="app-btn-danger">
-                Refuser la nouvelle date
-              </button>
-            </div>
-          )}
+          <button type="submit" disabled={loading} className="app-btn-primary text-sm">
+            {loading ? "Mise a jour..." : "Valider"}
+          </button>
+        </form>
 
-          {showCompletionReport && (
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
-              <p className="font-semibold text-slate-900">Compte rendu enregistre</p>
-              <p className="mt-1 whitespace-pre-line">{completionReport || "-"}</p>
-              {completedAtLabel && <p className="mt-2 text-xs text-slate-500">Termine le {completedAtLabel}</p>}
-            </div>
-          )}
-        </>
-      ) : (
-        <p className="mt-4 text-sm text-slate-500">Ce projet n&apos;est pas encore assigne.</p>
+        {!workflowConfirmed && (
+          <form className="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-3" onSubmit={submitDeadlineRequest}>
+            <p className="inline-flex items-center gap-2 text-xs text-slate-500">
+              <FiCalendar size={12} />
+              Demander un report de deadline
+            </p>
+            <input
+              type="date"
+              value={requestDate}
+              onChange={(event) => setRequestDate(event.target.value)}
+              className="app-input"
+            />
+            <textarea
+              value={requestReason}
+              onChange={(event) => setRequestReason(event.target.value)}
+              placeholder="Raison..."
+              className="app-textarea"
+              rows={2}
+            />
+            <button type="submit" disabled={loading} className="app-btn-outline text-sm">
+              Envoyer
+            </button>
+          </form>
+        )}
+
+        {showCompletionAlert && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <p className="inline-flex items-center gap-2 font-medium">
+              <FiAlertTriangle size={14} />
+              100% atteint — finalisez le projet.
+            </p>
+          </div>
+        )}
+
+        {(showCompletionAlert || hasCompletionReport || reportRequired) && (
+          <form className="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-3" onSubmit={submitCompletionReport}>
+            <p className="text-sm font-medium text-slate-700">Compte rendu</p>
+            <textarea
+              value={completionReport}
+              onChange={(event) => setCompletionReport(event.target.value)}
+              placeholder="Resultat final du projet..."
+              className="app-textarea"
+              rows={3}
+            />
+            <button type="submit" disabled={loading || normalizedProgress < 100} className="app-btn-primary text-sm">
+              Marquer termine
+            </button>
+          </form>
+        )}
+
+        {hasCompletionReport && completedAtLabel && (
+          <p className="text-xs text-emerald-600">Termine le {completedAtLabel}</p>
+        )}
+      </div>
+
+      {deadlineChangeStatus !== "none" && (
+        <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm">
+          <p className="font-medium text-slate-700">
+            Report deadline: {deadlineChangeStatus === "pending" ? "en attente" : deadlineChangeStatus === "approved" ? "approuve" : "refuse"}
+          </p>
+          {deadlineChangeRequestedDateLabel && <p className="text-xs text-slate-500">Date demandee: {deadlineChangeRequestedDateLabel}</p>}
+          {deadlineChangeReason && <p className="mt-1 text-xs text-slate-500">{deadlineChangeReason}</p>}
+        </div>
       )}
     </section>
   );

@@ -1,6 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FiArrowLeft, FiBriefcase, FiCalendar, FiCheckCircle, FiFileText, FiList, FiTrendingUp, FiUser, FiUsers } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiBriefcase,
+  FiCalendar,
+  FiCheckCircle,
+  FiClock,
+  FiFileText,
+  FiList,
+  FiTrendingUp,
+  FiUser,
+  FiUsers,
+} from "react-icons/fi";
 
 import ProjectAssignmentWorkflowCard from "@/components/projects/ProjectAssignmentWorkflowCard";
 import ProjectFileSubmissionCard from "@/components/projects/ProjectFileSubmissionCard";
@@ -31,28 +42,11 @@ function formatCommission(value: number | null) {
   return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
 }
 
-function projectStatusBadge(status: "pending" | "in_progress" | "completed") {
-  if (status === "pending") {
-    return <Badge label="pending" variant="pending" />;
-  }
-
-  if (status === "in_progress") {
-    return <Badge label="in progress" variant="progress" />;
-  }
-
-  return <Badge label="completed" variant="done" />;
-}
-
-function taskStatusBadge(status: "todo" | "in_progress" | "done") {
-  if (status === "todo") {
-    return <Badge label="todo" variant="pending" />;
-  }
-
-  if (status === "in_progress") {
-    return <Badge label="in progress" variant="progress" />;
-  }
-
-  return <Badge label="done" variant="done" />;
+function progressBarColor(percent: number) {
+  if (percent >= 100) return "bg-emerald-500";
+  if (percent >= 60) return "bg-blue-500";
+  if (percent >= 30) return "bg-indigo-500";
+  return "bg-amber-500";
 }
 
 export default async function ProjectDetailsPage({ params }: ProjectDetailsPageProps) {
@@ -171,34 +165,26 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
   const projectDeadlineInputValue = project.deadline ? project.deadline.toISOString().slice(0, 10) : "";
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-[linear-gradient(145deg,#ffffff,#eef4ff)] p-6 shadow-sm">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-blue-100/60 blur-3xl" />
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
-            <Link href="/projects" className="app-btn-soft">
-              <FiArrowLeft className="text-sm" />
-              Retour projets
-            </Link>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Detail projet</p>
-              <h1 className="mt-2 page-title text-slate-900">{project.title}</h1>
-              <p className="page-subtitle">Suivi d&apos;execution, validation d&apos;assignation et progression en temps reel.</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-2">
-              {projectStatusBadge(effectiveProjectStatus)}
-              <Badge label={`${projectProgressPercent}%`} variant="medium" />
-              <Badge
-                label={progressDerivedFromTasks ? "progression liee aux taches" : "progression projet manuelle"}
-                variant={progressDerivedFromTasks ? "progress" : "medium"}
-              />
-            </div>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link href="/projects" className="app-btn-soft">
+            <FiArrowLeft size={14} />
+            Retour
+          </Link>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold text-slate-900 sm:text-xl">{project.title}</h1>
             <p className="text-xs text-slate-500">Cree le {formatDate(project.createdAt)}</p>
           </div>
         </div>
-      </section>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge
+            label={effectiveProjectStatus === "pending" ? "En attente" : effectiveProjectStatus === "in_progress" ? "En cours" : "Termine"}
+            variant={effectiveProjectStatus === "pending" ? "pending" : effectiveProjectStatus === "in_progress" ? "progress" : "done"}
+          />
+          <Badge label={`${projectProgressPercent}%`} variant="medium" />
+        </div>
+      </div>
 
       <ProjectQuickHeaderCard
         projectId={project.id}
@@ -218,157 +204,159 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
         }))}
       />
 
-      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <article className="app-card p-4">
-          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-            <FiTrendingUp />
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+              <FiTrendingUp size={13} />
+            </span>
             Progression
-          </p>
-          <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{projectProgressPercent}%</p>
-          <div className="mt-3 h-2 rounded-full bg-slate-200">
-            <div className="h-full rounded-full bg-slate-900" style={{ width: `${projectProgressPercent}%` }} />
+          </div>
+          <p className="mt-2 text-xl font-bold text-slate-900">{projectProgressPercent}%</p>
+          <div className="mt-2 h-1.5 rounded-full bg-slate-200">
+            <div className={`h-full rounded-full ${progressBarColor(projectProgressPercent)}`} style={{ width: `${projectProgressPercent}%` }} />
           </div>
         </article>
 
         <article className="app-card p-4">
-          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-            <FiList />
-            Taches rattachees
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <FiList size={13} />
+            </span>
+            Taches
+          </div>
+          <p className="mt-2 text-xl font-bold text-slate-900">
+            <span className="text-emerald-600">{doneTasks}</span>
+            <span className="text-sm font-medium text-slate-400"> / {totalTasks}</span>
           </p>
-          <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{totalTasks}</p>
         </article>
 
         <article className="app-card p-4">
-          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-            <FiCheckCircle />
-            Taches finalisees
-          </p>
-          <p className="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">{doneTasks}</p>
-        </article>
-
-        <article className="app-card p-4">
-          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-            <FiCalendar />
-            Date limite
-          </p>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <FiCalendar size={13} />
+            </span>
+            Deadline
+          </div>
           <p className="mt-2 text-base font-semibold text-slate-900">{formatDate(project.deadline)}</p>
         </article>
 
         <article className="app-card p-4">
-          <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-            <FiBriefcase />
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+              <FiBriefcase size={13} />
+            </span>
             Commission
-          </p>
+          </div>
           <p className="mt-2 text-base font-semibold text-slate-900">{formatCommission(project.commissionCfa)}</p>
         </article>
       </section>
 
-      <section id="project-details" className="grid gap-5 xl:grid-cols-[1.75fr_1fr]">
+      <section className="grid gap-4 xl:grid-cols-[1.75fr_1fr]">
         <article className="app-card p-5">
-          <h2 className="inline-flex items-center gap-2 text-lg font-semibold text-slate-900">
-            <FiFileText />
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <FiFileText size={16} className="text-slate-400" />
             Description
           </h2>
-          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{project.description}</p>
+          <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-600">{project.description}</p>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-                <FiUser />
-                Cree par
-              </p>
-              <p className="mt-1 font-semibold text-slate-900">
-                {project.createdBy.firstName} {project.createdBy.lastName}
-              </p>
+          <div className="mt-4 flex flex-wrap gap-3 border-t border-slate-100 pt-4 text-sm">
+            <div className="flex items-center gap-2 text-slate-600">
+              <FiUser size={13} className="text-slate-400" />
+              <span className="font-medium">{project.createdBy.firstName} {project.createdBy.lastName}</span>
+              <span className="text-xs text-slate-400">createur</span>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-slate-500">
-                <FiUsers />
-                Equipe assignee
-              </p>
-              <p className="mt-1 font-semibold text-slate-900">{assignedMembers.length} personne{assignedMembers.length > 1 ? "s" : ""}</p>
-              <p className="mt-1 text-xs text-slate-500">
+            <div className="flex items-center gap-2 text-slate-600">
+              <FiUsers size={13} className="text-slate-400" />
+              <span className="font-medium">
                 {assignedMembers.length > 0
-                  ? assignedMembers.map((member) => `${member.firstName} ${member.lastName}`).join(", ")
-                  : "Aucune assignation"}
-              </p>
+                  ? assignedMembers.map((m) => `${m.firstName} ${m.lastName}`).join(", ")
+                  : "Non assigne"}
+              </span>
+              <span className="text-xs text-slate-400">equipe</span>
             </div>
           </div>
         </article>
 
         <aside className="space-y-3">
           <div className="app-card p-4">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Validation assignment</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Badge label={project.receivedAt ? "projet recu" : "reception en attente"} variant={project.receivedAt ? "done" : "pending"} />
-              <Badge
-                label={project.deadlineValidatedAt ? "date de fin validee" : "date non validee"}
-                variant={project.deadlineValidatedAt ? "progress" : "pending"}
-              />
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Validation</p>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600">Reception</span>
+                <Badge label={project.receivedAt ? "Recu" : "En attente"} variant={project.receivedAt ? "done" : "pending"} />
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600">Deadline</span>
+                <Badge label={project.deadlineValidatedAt ? "Validee" : "Non validee"} variant={project.deadlineValidatedAt ? "done" : "pending"} />
+              </div>
             </div>
           </div>
 
           <div className="app-card p-4">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Compte rendu</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Badge label={project.reportRequired ? "requis" : "non requis"} variant={project.reportRequired ? "high" : "medium"} />
-              <Badge
-                label={`demande date: ${project.deadlineChangeStatus}`}
-                variant={
-                  project.deadlineChangeStatus === "approved"
-                    ? "done"
-                    : project.deadlineChangeStatus === "rejected"
-                      ? "high"
-                      : "pending"
-                }
-              />
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Compte rendu</p>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600">Rapport</span>
+                <Badge label={project.reportRequired ? "Requis" : "Non requis"} variant={project.reportRequired ? "high" : "low"} />
+              </div>
+              {project.deadlineChangeStatus !== "none" && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-600">Report deadline</span>
+                  <Badge
+                    label={project.deadlineChangeStatus === "approved" ? "Approuve" : project.deadlineChangeStatus === "rejected" ? "Rejete" : "En attente"}
+                    variant={project.deadlineChangeStatus === "approved" ? "done" : project.deadlineChangeStatus === "rejected" ? "high" : "pending"}
+                  />
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className="app-card p-4">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Origine progression</p>
-            <p className="mt-2 text-sm font-medium text-slate-700">
-              {progressDerivedFromTasks
-                ? "La progression est automatiquement calculee a partir des taches liees."
-                : "La progression est mise a jour directement au niveau du projet."}
-            </p>
           </div>
         </aside>
       </section>
 
       <section className="app-card p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-900">Taches de ce projet</h2>
-          <Badge label={`${totalTasks} tache${totalTasks > 1 ? "s" : ""}`} variant="medium" />
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <FiCheckCircle size={16} className="text-slate-400" />
+            Taches ({totalTasks})
+          </h2>
         </div>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-2">
           {project.tasks.length === 0 ? (
-            <p className="text-sm text-slate-500">Aucune tache rattachee a ce projet.</p>
+            <p className="py-4 text-center text-sm text-slate-400">Aucune tache rattachee.</p>
           ) : (
             project.tasks.map((task) => {
               const taskProgress = Math.max(0, Math.min(100, task.progressPercent));
+              const isOverdue = task.deadline && new Date(task.deadline) < new Date() && task.status !== "done";
 
               return (
                 <Link
                   key={task.id}
                   href={`/tasks/${task.id}`}
-                  className="block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-300"
+                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-slate-300"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-slate-900">{task.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Assigne: {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "-"}
-                      </p>
+                  <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                    task.status === "done" ? "bg-emerald-50 text-emerald-600" : task.status === "in_progress" ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-400"
+                  }`}>
+                    {task.status === "done" ? <FiCheckCircle size={14} /> : task.status === "in_progress" ? <FiClock size={14} /> : <FiList size={14} />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-medium text-slate-900">{task.title}</p>
+                      {isOverdue && <span className="shrink-0 rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">RETARD</span>}
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {taskStatusBadge(task.status)}
-                      <Badge label={`${taskProgress}%`} variant="medium" />
-                    </div>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "Non assigne"}
+                    </p>
                   </div>
-                  <div className="mt-3 h-2 rounded-full bg-slate-200">
-                    <div className="h-full rounded-full bg-slate-900" style={{ width: `${taskProgress}%` }} />
+                  <div className="flex shrink-0 items-center gap-3">
+                    <div className="hidden w-20 sm:block">
+                      <div className="h-1.5 rounded-full bg-slate-200">
+                        <div className={`h-full rounded-full ${progressBarColor(taskProgress)}`} style={{ width: `${taskProgress}%` }} />
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-500">{taskProgress}%</span>
                   </div>
                 </Link>
               );
