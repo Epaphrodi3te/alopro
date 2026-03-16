@@ -12,38 +12,24 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-100 px-4 py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_88%_12%,rgba(14,165,233,0.16),transparent_35%),radial-gradient(circle_at_12%_90%,rgba(20,184,166,0.2),transparent_35%)]" />
-
-      <section className="relative grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/92 shadow-[0_36px_80px_-44px_rgba(15,23,42,0.55)] backdrop-blur md:grid-cols-[1.05fr_0.95fr]">
-        <div className="relative bg-[linear-gradient(155deg,#0f172a,#1e3a8a_58%,#0ea5e9)] p-7 text-white md:p-10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.22),transparent_30%)]" />
-          <div className="relative">
-            <BrandMark
-              dark
-              subtitle="Pilotage simple des projets et des taches."
-            />
-            <div className="mt-10 max-w-md">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-100">Workspace professionnel</p>
-              <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
-                Centralisez votre activite d&apos;equipe.
-              </h1>
-              <p className="mt-4 text-sm leading-7 text-slate-200/95">
-                Connectez-vous pour suivre l&apos;avancement, assigner et valider rapidement.
-              </p>
-            </div>
-            <div className="mt-8">
-              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100">
-                AloPro Workspace
-              </span>
-            </div>
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+      <section className="grid w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg md:grid-cols-[1fr_1fr]">
+        <div className="bg-slate-900 p-8 text-white md:p-10">
+          <BrandMark dark subtitle="Gestion de projets et taches" />
+          <div className="mt-10">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Centralisez votre activite.
+            </h1>
+            <p className="mt-3 text-sm leading-relaxed text-slate-300">
+              Suivez l&apos;avancement, assignez et validez rapidement.
+            </p>
           </div>
         </div>
 
-        <div className="p-7 md:p-10">
-          <span className="form-kicker">AloPro access</span>
-          <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900">Connexion</h2>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">Accedez a votre espace de travail.</p>
+        <div className="p-8 md:p-10">
+          <span className="form-kicker">Connexion</span>
+          <h2 className="mt-3 text-xl font-bold text-slate-900">Accedez a votre espace</h2>
+          <p className="mt-1 text-sm text-slate-500">Entrez vos identifiants pour continuer.</p>
 
           <div className="mt-6">
             <LoginForm />

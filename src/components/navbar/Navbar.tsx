@@ -4,9 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Swal from "sweetalert2";
 import { usePathname } from "next/navigation";
-import { FiChevronLeft, FiChevronRight, FiLogOut, FiMenu, FiShield } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiLogOut, FiMenu } from "react-icons/fi";
 
-import BrandMark from "@/components/brand/BrandMark";
 import { getRoleLabel } from "@/lib/navigation";
 import { Role } from "@prisma/client";
 
@@ -48,78 +47,63 @@ export default function Navbar({
   const handleLogout = async () => {
     setLoading(true);
     try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
+      await fetch("/api/auth/logout", { method: "POST" });
       await Swal.fire({
         icon: "success",
         title: "Deconnexion",
-        text: "Session terminee avec succes.",
+        text: "Session terminee.",
         timer: 1200,
         showConfirmButton: false,
       });
-
       router.push("/login");
       router.refresh();
     } catch {
-      Swal.fire({
-        icon: "error",
-        title: "Erreur",
-        text: "Impossible de se deconnecter.",
-      });
+      Swal.fire({ icon: "error", title: "Erreur", text: "Impossible de se deconnecter." });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/90 bg-white/88 px-4 py-4 backdrop-blur md:px-7">
-      <div className="flex items-center gap-2.5">
+    <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur-sm md:px-6">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onToggleMobileSidebar}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 md:hidden"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 md:hidden"
           aria-label="Ouvrir le menu"
         >
-          <FiMenu />
+          <FiMenu size={16} />
         </button>
         <button
           type="button"
           onClick={onToggleDesktopSidebar}
-          className="hidden h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 md:inline-flex"
+          className="hidden h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 md:inline-flex"
           aria-label="Replier le menu"
         >
-          {desktopCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
+          {desktopCollapsed ? <FiChevronRight size={16} /> : <FiChevronLeft size={16} />}
         </button>
-        <div className="hidden min-[480px]:block md:hidden">
-          <BrandMark compact subtitle="Workspace" />
-        </div>
       </div>
 
       <div className="mr-auto min-w-0">
-        <p className="hidden items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.13em] text-slate-600 sm:inline-flex">
-          <FiShield className="text-xs" />
-          Espace {getRoleLabel(role)}
-        </p>
-        <h2 className="mt-2 truncate text-lg font-bold tracking-tight text-slate-900 sm:text-xl md:text-2xl">
-          {section}
-          <span className="hidden sm:inline">
-            {" "}
-            <span className="text-slate-400">|</span> Bonjour, {firstName}
+        <div className="flex items-center gap-2">
+          <h2 className="truncate text-base font-semibold text-slate-900 md:text-lg">{section}</h2>
+          <span className="hidden rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 sm:inline-block">
+            {getRoleLabel(role)}
           </span>
-        </h2>
+        </div>
+        <p className="hidden text-xs text-slate-500 sm:block">Bonjour, {firstName}</p>
       </div>
 
       <button
         type="button"
         onClick={handleLogout}
         disabled={loading}
-        className="app-btn-primary text-xs sm:text-sm"
+        className="app-btn-soft text-xs"
         aria-label="Se deconnecter"
       >
-        <FiLogOut className="text-sm" />
-        <span className="hidden sm:inline">{loading ? "Deconnexion..." : "Se deconnecter"}</span>
+        <FiLogOut size={14} />
+        <span className="hidden sm:inline">{loading ? "..." : "Deconnexion"}</span>
       </button>
     </header>
   );
